@@ -1,13 +1,29 @@
 from bs4 import BeautifulSoup
 import requests
 from urllib.parse import urljoin
-from typing import Optional, List, Dict
+from typing import List
 
 
-def autoindex_parse_paths(html: str):
-    """Parses autoindex paths from a data server page."""
+def autoindex_listdir(
+    url: str,
+    *,
+    exts = (".tif", ".tiff"),
+    timeout: float = 20.0,
+) -> List[str]:
+    """
+    List files from a remote HTTP directory (autoindex-style).
+
+    Returns [<paths>]
+    """
+
+    # request html page
+    res = requests.get(url, timeout=timeout, headers={"User-Agent": "scroll-rmoe/1.0"})
+    res.raise_for_status()
+
+    html = res.text
+
+    # parse paths
     soup = BeautifulSoup(html, "html.parser")
-
     paths = []
 
     for tr in soup.select("#list tbody tr"):
@@ -17,74 +33,31 @@ def autoindex_parse_paths(html: str):
             continue
 
         name = a.get_text(strip=True)
-
         paths.append(name)
         
     return paths
 
-
-def autoindex_listdir(
-    base_url: str,
-    remote_dir: str,
-    *,
-    exts = (".tif", ".tiff"),
-    timeout: float = 20.0,
-) -> List[Dict]:
+def list_volume_files(url: str) -> List[str]:
     """
-    List files from a remote HTTP directory (autoindex-style).
+    List files from the volumes/ dir of the data server.
 
-    Returns [{'name': '000123.tif', 'url': '...', 'size': None, 'modified': None}, ...]
+    Returns [<paths>]
     """
+    # list files in volumes/
+    url = urljoin(url.rstrip("/") + "/", "volumes/")
+    paths = autoindex_listdir(url)
 
-    # request html page
-    url = urljoin(base_url.rstrip("/") + "/", remote_dir.lstrip("/") + "/")
-    headers = {"User-Agent": "scroll-rmoe/1.0"}
-    res = requests.get(url, timeout=timeout, headers=headers)
-    res.raise_for_status()
-    html = res.text
+    # format timestamps and select latest acquisition
+    for i in range(len(paths)):
+        paths[i] = paths[i].rstrip("/")
 
-    # parse paths
-    paths = autoindex_parse_paths(html)
+        if paths[i] == ".vckeep":
+            paths.remove(paths[i])
 
-    print(paths)
+    latest = max(paths, key=lambda p: int(p))
 
-    """
-    # Try JSON first (some endpoints return JSON)
-    try:
-        js = r.json()
-        items = []
-        for it in js:
-            name = it.get("name") or it.get("Key") or it.get("filename")
-            if not name: continue
-            if name.lower().endswith(exts):
-                items.append({
-                    "name": name,
-                    "url": urljoin(url, name),
-                    "size": it.get("size") or it.get("Size"),
-                    "modified": it.get("last_modified") or it.get("LastModified"),
-                })
-        if items:
-            return sorted(items, key=lambda d: d["name"])
-    except Exception:
-        pass
+    # update url and acquire file paths
+    url = urljoin(url, str(latest) + "/")
+    paths = autoindex_listdir(url)
 
-    # Fallback: parse HTML links (no BeautifulSoup needed)
-    import re
-    hrefs = re.findall(r'href=[\'"]([^\'"]+)[\'"]', text, flags=re.I)
-    files = []
-    for href in hrefs:
-        # ignore parent links and anchors
-        if href in ("../", "./") or href.startswith("#"):
-            continue
-        name = href.split("?")[0].split("#")[0]
-        # Only direct filenames in this directory; skip subdirs unless you want them
-        if name.endswith("/") or "/" in name:
-            continue
-        if name.lower().endswith(exts):
-            files.append({"name": name, "url": urljoin(url, name), "size": None, "modified": None})
-    # Natural sort by file name with numbers
-    def nkey(d):
-        s = d["name"]
-        return [int(t) if t.isdigit() else t.lower() for t in re.split(r"(\d+)", s)]
-    return sorted(files, key=nkey)
-    """
+    return paths
