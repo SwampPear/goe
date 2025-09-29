@@ -1,0 +1,154 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% --------------------------------------------------------
+% RMxAA Rho
+% LaTeX Template
+% Version X.X.X (25/06/2025)
+%
+% Authors: 
+% Carlos Román-Zúñiga (croman@astro.unam.mx)
+% Irene Cruz-Gonzaélz )icruzgonzalez@astro.unam.mx)
+% Contributors:
+% Guillermo Jimenez (memo.notess1@gmail.com)
+% Eduardo Gracidas (eduardo.gracidas29@gmail.com)
+% 
+% License:
+% XXXXXXXXXX
+% --------------------------------------------------------
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% --------------------------------------------------------
+%                     ACKNOWLEDGMENTS
+% This template has been developed based on the original rho 
+% LaTeX class work, created by Luis Guillermo Jimenez Lopez 
+% and Eduardo Gracidas Reyes. Available in the Overleaf's 
+% template gallery.
+% --------------------------------------------------------
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% The following lines must be included in all contributions
+%
+\documentclass[10pt,letter,twoside]{rmaa-rho-class/rmac-rho}
+\RMxAAtemplatetype{\RMxAC} % Select your article type
+% {\RMxAA} article template
+% {\RMxAC} conference template
+\newcommand\rmaatex{RMxAC~\LaTeX}
+\newcommand{\CS}[1]{\texttt{\textbackslash #1}}
+\usepackage{background}
+\usepackage{lipsum}
+\definecolor{textcolor}{HTML}{F9C051}
+
+%----------------------------------------------------------
+% JOURNAL/HEADER INFORMATION
+%----------------------------------------------------------
+% NOTE: It will be correctly filled by the Editors, the author can just leave it as it is
+
+\vol{63}
+% Counter page
+\setcounter{page}{30}
+\pages{30}
+\thisyear{2026}
+
+
+\doi{\href{https://www.astroscu.unam.mx/RMxAC/RMxAC..XX-X}{https://www.astroscu.unam.mx/RMxAC/RMxAC..XX-X}}
+%
+
+\newenvironment{Example}
+{\begin{list}{}{\setlength{\leftmargin}{10pt}\setlength{\rightmargin}{10pt}}%
+  \item[]\itshape}
+  {\end{list}}
+%
+
+% From here on the RMxAC extended article, onepage or only abstract information should be included by the author(s)
+%
+%----------------------------------------------------------
+% TITLE
+%----------------------------------------------------------
+\title{  Abstract contribution using the \rmaatex ~ template}
+%----------------------------------------------------------
+% AUTHORS AND AFFILIATIONS
+%----------------------------------------------------------
+
+\author[1]{I.~Cruz-González \orcidlink{0000-0002-2653-1120}}
+\author[2]{C.~G.~ Román-Zúñiga \orcidlink{0000-0001-8600-4798}}
+\author[3]{W.~J.~Henney \orcidlink{0000-0001-6208-9109}}
+%\author[1,2,$\dagger$]{A. Student}
+%\author[2,4]{M.~Y.~Posdoc}
+
+%----------------------------------------------------------
+\affil[1]{Universidad Nacional Autónoma de México, Instituto de Astronomía}
+\affil[2]{Universidad Nacional Autónoma de México, Instituto de Astronomía, Ensenada, BC}
+\affil[3]{Universidad Nacional Autónoma de México, Instituto de Radioastronomía y Astrofísica} 
+%\affil[4]{One more affiliation you may need}
+%\affil[$\dagger$]{This project is part of a collaboration/consortium/program}
+
+
+%----------------------------------------------------------
+% Meeting details go here, that will appear in all the pages
+%----------------------------------------------------------
+\newcommand\Text{\small ``Local Volume Mapper III´', Zihuatanejo, Gro., Mexico, September 10-15, 2026.  \\~\\Volume Editors: Milky Way, Magellanic Cloud \& Messier 33}
+
+\SetBgColor{textcolor}
+\SetBgOpacity{1}
+\SetBgAngle{90}
+\SetBgPosition{current page.center}
+\SetBgVshift{-0.46\textwidth}
+%\SetBgVshift{-0.36\textwidth}
+\SetBgScale{1.2}
+%\SetBgScale{1.8}
+\SetBgContents{\sffamily\Text}
+
+%----------------------------------------------------------
+% ARTICLE INFORMATION
+%----------------------------------------------------------
+
+\corres{icruzgonzalez@astro.unam.mx}
+%\email{icruzgonzalez@astro.unam.mx}
+
+\received{April 12, 2025}
+\revised{April 16, 2025}
+\accepted{April 20, 2025}
+\published{\today}
+%\doi{\url{https://www.astroscu.unam.mx/rmaa/RMxAA..XX-X}}
+
+%----------------------------------------------------------
+% ABSTRACT
+%----------------------------------------------------------
+\setbool{rho-abstract}{true} % Set false to hide the abstract
+\setbool{rho-resumen}{false} % Set false to hide the abstract
+%\begin{document}
+
+%
+\textwidth=16.5cm
+\begin{abstract}
+  \RMxAAstart{W}elcome to the \rmaatex\ template (v1.1 31/08/2025) to prepare your contribution to the proceedings of the conference to be published in RMxAC. There are three types of macros for contributions to publication in the Serie de Conferencias of our journal:  extended, onepage, and abstract. Use examples “rm\_extended\_example”, “rm\_onepage\_example” or “rm\_abstract\_example”, depending on the case. The only abstract contribution should not exceed 300 words, including the title, author list, and addresses. This corresponds to approximately half the length of a column on the page or an abstract of about 200 words.  \\ 
+This  file is an example for abstract only {\bf rmac\_abstract\_example.tex}, generally used for poster and/or short oral contributions.
+\end{abstract}
+%\maketitle
+%\thispagestyle{fancy}
+\thispagestyle{firststyle}
+
+%----------------------------------------------------------
+
+%\keywords{keyword 1, keyword 2, keyword 3, keyword 4, keyword 5}
+
+%\pclave{palabra clave 1, palabra clave 2, palabra clave 3}
+
+%----------------------------------------------------------
+
+\begin{document}
+	
+\maketitle
+
+
+\SetBgColor{textcolor}
+\SetBgOpacity{1}
+\SetBgAngle{90}
+\SetBgPosition{current page.center}
+\SetBgVshift{-0.43\textwidth}
+\SetBgScale{1.2}
+%\SetBgScale{1.8}
+\SetBgContents{\sffamily\Text}
+
+
+%Corresponding author
+%\footnote{{\color{rhocolor} {\small \bf Corresponding author:}} {icruzgonzalez@astro.unam.mx}}
+
+\end{document}
