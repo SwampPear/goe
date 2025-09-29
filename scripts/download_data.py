@@ -9,29 +9,29 @@ import argparse
 from urllib.parse import urljoin
 from src.config import config
 from src.io.listing import list_volume_files
-from src.io.loading import download_tif
+from src.io.loading import download_files
 
 
 def main():
-    # script args
+    # args
     ap = argparse.ArgumentParser(description="Loads data from the Vesuvius Challenge data server.")
     ap.add_argument("--scroll", type=int, required=True, help="Scroll identifier.")
     ap.add_argument("--dest", required=True, help="Destination for downloaded .tif files.")
-    ap.add_argument("--start", type=int, required=True, help="Inclusive start index for download slice.")
-    ap.add_argument("--end", type=int, required=True, help="Uninclusive end index for download slice.")
+    ap.add_argument("--start", type=int, required=True, help="Start index for download slice.")
+    ap.add_argument("--count", type=int, required=True, help="Count of files to download in download slice.")
     args = ap.parse_args()
 
     scroll = args.scroll - 1
     dest = args.dest
     start = args.start
-    end = args.end
+    count = args.count
 
     # parse autoindex paths from server
     url = config("data", "urls")[scroll]
     paths = list_volume_files(url)
 
-    for i in range(start, end):
-        download_tif(paths[i], dest)
+    # download slice
+    download_files(paths, dest, start=start, count=count)
 
 
 if __name__ == '__main__':

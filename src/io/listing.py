@@ -12,7 +12,7 @@ def autoindex_listdir(url: str) -> List[str]:
     """
 
     # request html page
-    res = requests.get(url, timeout=timeout, headers={"User-Agent": "scroll-rmoe/1.0"})
+    res = requests.get(url, headers={"User-Agent": "scroll-rmoe/1.0"})
     res.raise_for_status()
 
     html = res.text
