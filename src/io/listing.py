@@ -4,14 +4,9 @@ from urllib.parse import urljoin
 from typing import List
 
 
-def autoindex_listdir(
-    url: str,
-    *,
-    exts = (".tif", ".tiff"),
-    timeout: float = 20.0,
-) -> List[str]:
+def autoindex_listdir(url: str) -> List[str]:
     """
-    List files from a remote HTTP directory (autoindex-style).
+    Lists files from a remote HTTP directory (autoindex-style).
 
     Returns [<paths>]
     """
@@ -49,7 +44,7 @@ def list_volume_files(url: str) -> List[str]:
 
     # format timestamps and select latest acquisition
     for i in range(len(paths)):
-        paths[i] = paths[i].rstrip("/")
+        paths[i] = paths[i].rstrip("/").split("/")[-1]
 
         if paths[i] == ".vckeep":
             paths.remove(paths[i])
@@ -59,5 +54,9 @@ def list_volume_files(url: str) -> List[str]:
     # update url and acquire file paths
     url = urljoin(url, str(latest) + "/")
     paths = autoindex_listdir(url)
+
+    # format full path names
+    for i in range(len(paths)):
+        paths[i] = url + paths[i]
 
     return paths

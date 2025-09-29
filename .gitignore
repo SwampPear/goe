@@ -1,3 +1,4 @@
 struct.md
 .venv/
 __pycache__/
+data/
