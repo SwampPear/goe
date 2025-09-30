@@ -15,7 +15,7 @@ try:
 except ImportError:
     tqdm = None
 
-def download_file(session: requests.Session, url: str, out_path: Path, chunk=1<<20):
+def _download_file(session: requests.Session, url: str, out_path: Path, chunk=1<<20):
     out_path.parent.mkdir(parents=True, exist_ok=True)
     tmp = out_path.with_suffix(out_path.suffix + ".part")
     # Resume if possible
@@ -33,29 +33,37 @@ def download_file(session: requests.Session, url: str, out_path: Path, chunk=1<<
     tmp.replace(out_path)  # atomic move
 
 
-def download_files(paths: List[str], out_dir: str, start: int = 0, count: int = 32, concurrency: int = 4):
-    # bound the slice
-    end = min(len(paths), start + count)
-    block = paths[start:end]
+def download_files(paths: List[str], dest: str, start: int = 0, count: int = 32, concurrency: int = 4):
+    # bound path slice
+    offset = start + count
+    end = min(len(paths), offset)
+    paths = paths[start:end]
 
+    # http adapteer (keep-alive pool)
     sess = requests.Session()
-    # keep-alive pool
     adapter = requests.adapters.HTTPAdapter(pool_connections=concurrency, pool_maxsize=concurrency, max_retries=2)
     sess.mount("http://", adapter); sess.mount("https://", adapter)
 
+    # submit jobs
     jobs = []
-    out_dir = Path(out_dir)
+    dest = Path(dest)
+
+    # concurrent requests
     with ThreadPoolExecutor(max_workers=concurrency) as ex:
-        for url in block:
-            name = url.split("/")[-1]
-            out_path = out_dir / name
-            if out_path.exists():  # skip existing
+        for path in paths:
+            # format file path
+            name = path.split("/")[-1] # file name
+            out_path = dest / name # 
+            if out_path.exists():
                 continue
-            jobs.append(ex.submit(download_file, sess, url, out_path))
+
+            # submit job
+            jobs.append(ex.submit(_download_file, sess, path, out_path))
 
         it = as_completed(jobs)
+
         if tqdm is not None:
             it = tqdm(it, total=len(jobs), desc="Downloading", unit="file")
         for fut in it:
-            fut.result()  # raise on error
+            fut.result()
             

@@ -5,12 +5,6 @@ from typing import List
 
 
 def autoindex_listdir(url: str) -> List[str]:
-    """
-    Lists files from a remote HTTP directory (autoindex-style).
-
-    Returns [<paths>]
-    """
-
     # request html page
     res = requests.get(url, headers={"User-Agent": "scroll-rmoe/1.0"})
     res.raise_for_status()
@@ -33,11 +27,6 @@ def autoindex_listdir(url: str) -> List[str]:
     return paths
 
 def list_volume_files(url: str) -> List[str]:
-    """
-    List files from the volumes/ dir of the data server.
-
-    Returns [<paths>]
-    """
     # list files in volumes/
     url = urljoin(url.rstrip("/") + "/", "volumes/")
     paths = autoindex_listdir(url)

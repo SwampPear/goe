@@ -1,11 +1,100 @@
-import os, argparse, numpy as np
-import tifffile as tiff
-from scipy.ndimage import gaussian_laplace, gaussian_filter, gaussian_gradient_magnitude
+# import os, argparse, numpy as np
+# import tifffile as tiff
+# from scipy.ndimage import gaussian_laplace, gaussian_filter, gaussian_gradient_magnitude
+# from typing import Dict, Tuple
 
+
+def process_features(pos: Tuple) -> Dict:
+    """
+    Processes features for a given voxel (16 channels total):
+        - intensity                   (1)
+        - enhancement filters         (3)
+        - Hessian eigenvalues         (3)
+        - structure-tensor outputs    (3)
+        - sheet-normal estimate       (1)
+        - valid-voxel mask            (1)
+        - geometric difficulty prior  (1)
+        - positional encodings        (3)
+    """
+    raise NotImplementedError("process_features not implemented")
+
+
+def _process_intensity(pos: Tuple[int, int, int]) -> NDArray[np.float32]:
+    """
+    Processes grayscale intensity for a single voxel.
+    Output shape: (1,)
+    """
+    raise NotImplementedError("_process_intensity not implemented")
+
+
+def _process_enhancement_filters(pos: Tuple[int, int, int]) -> NDArray[np.float32]:
+    """
+    Computes local enhancement responses at multiple scales.
+      - local contrast / normalized variance
+      - Laplacian-of-Gaussian (LoG)
+      - Difference-of-Gaussians (DoG)
+    Output shape: (3,)
+    """
+    raise NotImplementedError("_process_enhancement_filters not implemented")
+
+
+def _process_hessian_eigenvalues(pos: Tuple[int, int, int]) -> NDArray[np.float32]:
+    """
+    Computes the Hessian eigenvalues at or around the voxel, aggregated across scales or at a chosen scale. Used to 
+    detect sheet-/tube-like structures.
+    Output shape: (3,) (λ1 >= λ2 >= λ3)
+    """
+    raise NotImplementedError("_process_hessian_eigenvalues not implemented")
+
+
+def _process_structure_tensor_outputs(pos: Tuple[int, int, int]) -> NDArray[np.float32]:
+    """
+    Computes structure tensor descriptor eigenvalues.
+    Output shape: (3,) (λ1 >= λ2 >= λ3)
+    """
+    raise NotImplementedError("_process_structure_tensor_outputs not implemented")
+
+
+def _process_sheet_normal_estimate(pos: Tuple[int, int, int],
+                                   *,
+                                   cfg: FeatureConfig) -> NDArray[np.float32]:
+    """
+    Signed projection of normal onto a canonical axis (e.g., z).
+    Output shape: (1,)
+    """
+    raise NotImplementedError("_process_sheet_normal_estimate not implemented")
+
+
+def _process_valid_voxel_mask(pos: Tuple[int, int, int]) -> NDArray[np.float32]:
+    """
+    Returns 1.0 if the voxel is considered valid/usable, else 0.0.
+    Output shape: (1,)
+    """
+    raise NotImplementedError("_process_valid_voxel_mask not implemented")
+
+
+def _process_geometric_difficulty_prior(pos: Tuple[int, int, int]) -> NDArray[np.float32]:
+    """
+    Local curvature/thickness proxy.
+    Output shape: (1,)
+    """
+    raise NotImplementedError("_process_geometric_difficulty_prior not implemented")
+
+
+def _process_positional_encodings(pos: Tuple[int, int, int]) -> NDArray[np.float32]:
+    """
+    Sinusoids of coordinates at selected frequencies.
+    Output shape: (3,)
+    """
+    raise NotImplementedError("_process_positional_encodings not implemented")
+
+
+
+"""
 # -------------------- I/O --------------------
 
 def load_stack(src, z_start, z_count):
-    """Return a small z-stack [D,H,W] from a dir of TIFF slices or a multi-page TIFF."""
+    ""Return a small z-stack [D,H,W] from a dir of TIFF slices or a multi-page TIFF.""
     if os.path.isdir(src):
         files = sorted([f for f in os.listdir(src) if f.lower().endswith(('.tif', '.tiff'))])
         if not files: raise FileNotFoundError(f"No .tif files in {src}")
@@ -20,7 +109,7 @@ def load_stack(src, z_start, z_count):
     return vol.astype(np.float32)  # [D,H,W]
 
 def crop_center(vol, z, y, x, D, H, W):
-    """Center a patch on (z,y,x) with clipping at boundaries."""
+    ""Center a patch on (z,y,x) with clipping at boundaries.""
     Dz, Hy, Wx = vol.shape
     z0 = max(0, z - D//2); z1 = min(Dz, z0 + D); z0 = z1 - D
     y0 = max(0, y - H//2); y1 = min(Hy, y0 + H); y0 = y1 - H
@@ -39,7 +128,7 @@ def robust_clip_norm(a, lo=0.5, hi=99.5, eps=1e-6):
 # -------------------- Features --------------------
 
 def hessian_eigs(vol, sigma=1.0):
-    """Compute Hessian eigenvalues λ1≥λ2≥λ3 per voxel using Gaussian second derivatives."""
+    ""Compute Hessian eigenvalues λ1≥λ2≥λ3 per voxel using Gaussian second derivatives.""
     # second derivs
     Hxx = gaussian_filter(vol, sigma=sigma, order=(0,0,2))
     Hyy = gaussian_filter(vol, sigma=sigma, order=(0,2,0))
@@ -64,7 +153,7 @@ def hessian_eigs(vol, sigma=1.0):
     return vals  # [3,D,H,W] with λ1≥λ2≥λ3
 
 def structure_tensor_orientation(vol, sigma_grad=1.0, sigma_smooth=2.0):
-    """Dominant orientation via structure tensor (eigenvector of largest eigenvalue)."""
+    ""Dominant orientation via structure tensor (eigenvector of largest eigenvalue).""
     # gradients
     gx = gaussian_filter(vol, sigma=sigma_grad, order=(0,0,1))
     gy = gaussian_filter(vol, sigma=sigma_grad, order=(0,1,0))
@@ -89,7 +178,7 @@ def structure_tensor_orientation(vol, sigma_grad=1.0, sigma_smooth=2.0):
     return vdom  # [3,D,H,W], unit vector
 
 def build_features(patch):
-    """Compute feature channels for a small 3D patch [D,H,W] -> [C,D,H,W] and names."""
+    ""Compute feature channels for a small 3D patch [D,H,W] -> [C,D,H,W] and names.""
     p = robust_clip_norm(patch)                            # normalize raw intensity
     # 1) raw intensity
     ch_raw = p[None, ...]
@@ -159,3 +248,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+"""
