@@ -1,30 +1,71 @@
-# import os, argparse, numpy as np
-# import tifffile as tiff
-# from scipy.ndimage import gaussian_laplace, gaussian_filter, gaussian_gradient_magnitude
-# from typing import Dict, Tuple
+from typing import Tuple, Optional, Dict, Any
+import numpy as np
+from numpy.typing import NDArray
+import tifffile, zarr
 
 
-def process_features(pos: Tuple) -> Dict:
+def _get_voxel_value(volume: np.ndarray, pos: Tuple[int, int, int]) -> float:
+    z, y, x = pos
+    if not (0 <= z < volume.shape[0] and 0 <= y < volume.shape[1] and 0 <= x < volume.shape[2]):
+        return 0.0
+    return float(volume[z, y, x])
+
+
+def _process_intensity(volume: np.ndarray, pos: Tuple[int, int, int], intensity_range: Tuple[float, float]) -> NDArray[np.float32]:
+    v = _get_voxel_value(volume, pos)
+    vmin, vmax = intensity_range
+    if np.isnan(v) or vmax <= vmin:
+        norm = 0.0
+    else:
+        norm = (v - vmin) / (vmax - vmin)
+        norm = 0.0 if norm < 0.0 else (1.0 if norm > 1.0 else norm)
+    return np.asarray([norm], dtype=np.float32)
+
+
+def process_features(
+    pos: Tuple[int, int, int],
+    *,
+    path: Optional[str] = None,
+    volume: Optional[np.ndarray] = None,
+    series: int = 0,
+    level: int = 0,
+    pick_channel: Optional[int] = None,
+    intensity_range: Optional[Tuple[float, float]] = None,
+) -> Dict:
     """
     Processes features for a given voxel (16 channels total):
-        - intensity                   (1)
-        - enhancement filters         (3)
-        - Hessian eigenvalues         (3)
-        - structure-tensor outputs    (3)
-        - sheet-normal estimate       (1)
-        - valid-voxel mask            (1)
-        - geometric difficulty prior  (1)
-        - positional encodings        (3)
-    """
-    raise NotImplementedError("process_features not implemented")
 
+    Index    | Feature (Channels)
+    ------------------------------------------
+     [0]     | intensity                   (1)
+     [1-3]   | enhancement filters         (3)
+     [3-6]   | Hessian eigenvalues         (3)
+     [6-9]   | structure-tensor outputs    (3)
+     [9-10]  | sheet-normal estimate       (1)
+     [10-11] | valid-voxel mask            (1)
+     [11-12] | geometric difficulty prior  (1)
+     [12-15] | positional encodings        (3)
+    """
+    if volume is None:
+        if not path:
+            raise RuntimeError("Provide either 'volume' or 'path' to a TIFF.")
+        volume, inferred_range, meta = _load_tiff_as_zarr(path, series=series, level=level, pick_channel=pick_channel)
+    else:
+        meta = {'shape': tuple(volume.shape), 'dtype': str(volume.dtype), 'axes': 'ZYX'}
+        if np.issubdtype(volume.dtype, np.integer):
+            ii = np.iinfo(volume.dtype)
+            inferred_range = (float(ii.min), float(ii.max))
+        elif np.issubdtype(volume.dtype, np.floating):
+            inferred_range = (0.0, 1.0)
+        else:
+            inferred_range = (0.0, 1.0)
 
-def _process_intensity(pos: Tuple[int, int, int]) -> NDArray[np.float32]:
-    """
-    Processes grayscale intensity for a single voxel.
-    Output shape: (1,)
-    """
-    raise NotImplementedError("_process_intensity not implemented")
+    vmin_vmax = intensity_range if intensity_range is not None else inferred_range
+
+    features = np.zeros(16, dtype=np.float32)
+    features[0] = _process_intensity(volume, pos, vmin_vmax)[0]
+
+    return features
 
 
 def _process_enhancement_filters(pos: Tuple[int, int, int]) -> NDArray[np.float32]:

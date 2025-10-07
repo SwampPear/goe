@@ -26,12 +26,10 @@ def main():
     start = args.start
     count = args.count
 
-    # parse autoindex paths from server
     url = config("data", "urls")[scroll]
-    paths = list_volume_files(url)
 
-    # download slice
-    download_files(paths, dest, start=start, count=count)
+    paths = list_volume_files(url)
+    download_files(paths, dest, scroll, start=start, count=count)
 
 
 if __name__ == '__main__':
