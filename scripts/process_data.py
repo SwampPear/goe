@@ -8,9 +8,11 @@ import argparse
 from typing import List
 from src.config import config
 from src.io.loading import download_files, load_tiff_as_zarr
+from src.io.saving import write_tfrecord
+from src.processing.features import process_features
 
 
-def process_tiff_batch(files: List[Path]) -> None:
+def process_tiff_batch(files: List[Path], scroll_id: int) -> None:
     """
     Iterate and process each TIFF. Replace the 'process' stub with your pipeline.
     """
@@ -18,14 +20,18 @@ def process_tiff_batch(files: List[Path]) -> None:
         try:
             vol, intensity_range, meta = load_tiff_as_zarr(fp)
 
-            # --- BEGIN your processing ---
-            # e.g., compute one voxel’s intensity or kick off a feature job
-            # result = process_features((z, y, x), volume=vol)
-            # save/export as needed
-            # --- END your processing ---
-            
+            features = process_features(volume=vol, intensity_range=intensity_range)
+
+            write_tfrecord(
+                features,
+                path=f"data/processed/{scroll_id}/{fp.split('/')[-1].replace('.tif', '')}.tfrecord",
+                scroll_id=scroll_id,
+                intensity_range=intensity_range
+            )
+
             print(f"[OK] Processed: {fp} | shape={getattr(vol, 'shape', None)} dtype={getattr(vol, 'dtype', None)}")
         except Exception as e:
+            raise e
             print(f"[ERR] Failed processing {fp}: {e}")
 
 
@@ -46,7 +52,7 @@ def main():
 
     file_paths = [dest + "/" + ("0" * (5 - len(str(i)))) + str(i) + ".tif" for i in range(start, start + count)]
 
-    process_tiff_batch(file_paths)
+    process_tiff_batch(file_paths, scroll - 1)
 
 
 if __name__ == "__main__":

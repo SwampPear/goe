@@ -3,6 +3,11 @@ import numpy as np
 from numpy.typing import NDArray
 import tifffile, zarr
 
+try:
+    from tqdm import tqdm  # progress bar
+except Exception:
+    tqdm = None
+
 
 def _get_voxel_value(volume: np.ndarray, pos: Tuple[int, int, int]) -> float:
     z, y, x = pos
@@ -23,7 +28,6 @@ def _process_intensity(volume: np.ndarray, pos: Tuple[int, int, int], intensity_
 
 
 def process_features(
-    pos: Tuple[int, int, int],
     *,
     path: Optional[str] = None,
     volume: Optional[np.ndarray] = None,
@@ -31,20 +35,13 @@ def process_features(
     level: int = 0,
     pick_channel: Optional[int] = None,
     intensity_range: Optional[Tuple[float, float]] = None,
-) -> Dict:
+) -> NDArray[np.float32]:
     """
-    Processes features for a given voxel (16 channels total):
+    Processes features for every voxel in a volume (returns a full 4D array).
 
-    Index    | Feature (Channels)
-    ------------------------------------------
-     [0]     | intensity                   (1)
-     [1-3]   | enhancement filters         (3)
-     [3-6]   | Hessian eigenvalues         (3)
-     [6-9]   | structure-tensor outputs    (3)
-     [9-10]  | sheet-normal estimate       (1)
-     [10-11] | valid-voxel mask            (1)
-     [11-12] | geometric difficulty prior  (1)
-     [12-15] | positional encodings        (3)
+    Displays a progress bar for each slice (Z) as its rows (Y) are processed.
+
+    Output shape: (Z, Y, X, 16)
     """
     if volume is None:
         if not path:
@@ -61,9 +58,23 @@ def process_features(
             inferred_range = (0.0, 1.0)
 
     vmin_vmax = intensity_range if intensity_range is not None else inferred_range
+    zdim, ydim, xdim = volume.shape
+    features = np.zeros((zdim, ydim, xdim, 16), dtype=np.float32)
 
-    features = np.zeros(16, dtype=np.float32)
-    features[0] = _process_intensity(volume, pos, vmin_vmax)[0]
+    for z in range(zdim):
+        slice_data = np.asarray(volume[z])
+        iterator = tqdm(range(ydim), desc=f"Processing Slice", unit="row") if tqdm else range(ydim)
+
+        for y in iterator:
+            for x in range(xdim):
+                pos = (z, y, x)
+                features[z, y, x, 0] = _process_intensity(volume, pos, vmin_vmax)[0]
+                # You can later fill in other channels here:
+                # features[z, y, x, 1:4] = _process_enhancement_filters(pos)
+                # features[z, y, x, 4:7] = _process_hessian_eigenvalues(pos)
+                # ...
+        if tqdm:
+            iterator.close()
 
     return features
 
@@ -96,9 +107,7 @@ def _process_structure_tensor_outputs(pos: Tuple[int, int, int]) -> NDArray[np.f
     raise NotImplementedError("_process_structure_tensor_outputs not implemented")
 
 
-def _process_sheet_normal_estimate(pos: Tuple[int, int, int],
-                                   *,
-                                   cfg: FeatureConfig) -> NDArray[np.float32]:
+def _process_sheet_normal_estimate(pos: Tuple[int, int, int]) -> NDArray[np.float32]:
     """
     Signed projection of normal onto a canonical axis (e.g., z).
     Output shape: (1,)
