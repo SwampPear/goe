@@ -1,0 +1,217 @@
+\documentclass[12pt,a4paper]{cibb}
+\setlength{\parindent}{0pt}
+
+% Fallback definition for missing \@ordinalM
+\makeatletter
+\providecommand{\@ordinalM}[2]{#1}
+\makeatother
+
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd{\@startsection}{\@afterindenttrue}{\@afterindentfalse}{}{}
+\makeatother
+
+\usepackage{subfigure,graphicx}
+\usepackage{amsmath,amsfonts,latexsym,amssymb,euscript,xr}
+\usepackage{booktabs}
+\usepackage[nodayofweek]{datetime}
+\usepackage{hyperref}
+\usepackage{fmtcount}
+\usepackage[english]{datenumber}
+\usepackage[absolute]{textpos}
+
+
+
+\usepackage[table]{xcolor}
+\usepackage{color,colortbl,tabularx}
+
+\usepackage[english]{babel}
+\usepackage[protrusion=true,expansion=true]{microtype}
+\usepackage{amsmath,amsfonts,amsthm}
+% \usepackage[pdftex]{graphicx}
+\usepackage{pifont}
+
+\def\red{\color{red}}
+\def\black{\color{black}}
+\def\blue{\color{blue}}
+\def\magenta{\color{magenta}}
+
+
+
+\definecolor{LightBlue}{rgb}{0.88,0.9,0.9}
+
+\newcommand\blfootnote[1]{%
+  \begingroup
+  \renewcommand\thefootnote{}\footnote{#1}%
+  \addtocounter{footnote}{-1}%
+  \endgroup
+}
+
+\title{\Large $\ $\\ \bf GoE (Graph-of-Experts): Trainable Graphs for Hierarchical Multi-Scale Reasoning}
+
+\author{\large Michael Vaden$^{1, 2}$}
+\address{\footnotesize $\ $\\$^1$ Independent Researcher, Atlanta, USA
+$\ $\\$^2$ College of Computing, Georgia Institute of Technology, Atlanta, USA
+\newline
+$^*$corresponding author: mvaden6@gatech.edu, michaelvaden.mjv@gmail.com
+}
+
+
+\abstract{\small Mixture of Experts, Graph Networks, Transformers \normalsize
+\\[17pt]
+{\bf Abstract.} 
+
+-propose a Graph of Experts (GoE) architecture 
+
+-general framework for adaptive, compositional problem-solving 
+
+-each expert represents a specialized subnetwork 
+
+-edges between experts are learnable pathways encoding how info should flow 
+
+-gating policy learns which experts to invoke and how to traverse the expert graph 
+
+-gating enables dynamic routing, feedback, and recombination of partial results 
+
+-single pass -> structured reasoning 
+
+-blueprint for modern hierarchical intelligence 
+
+-efficient computation along graphs 
+
+-could coordinate reasoning across multi-modal domains 
+
+-need experiment results 
+\\
+}
+
+\begin{document}
+
+
+\thispagestyle{myheadings}
+\pagestyle{myheadings}
+\markright{\tt}%check year
+
+\textbf{1 Introduction}
+
+-hierarchical problems require systems that adapt across levels of abstraction 
+
+-vesuvius scrolls interesting because of diversity of challenges
+
+-conventional deep networks such as UNets or transformers apply the same operations to every region, lacking mechanisms to dynamically compose specialized behaviors 
+
+-reframe modular neural routing as a learnable graph 
+
+-each node goes with an expert trained for distinct subtask 
+
+-in the vesuvius case, geometry reconstruction, fiber orientation, ink segmentation 
+
+-directed nodes encode transition policies governing how information propagates 
+
+-GoE learns structured pathways through the expert graph, discovering intermediate representations to solve complex, multi-scale problems 
+
+-unifies specialization and coordination 
+
+-gating mechanism dynamically selects experts and edge transitions 
+
+-allows for self-organization into meaningful workflows  
+
+-Add experiment info
+
+\hfill
+
+\textbf{2 Background}
+
+-Recent progress in adaptive architectures explores dividing neural computation into specialized components  
+
+-MoE paradigm trains multiple experts in a specific data regime, while a gating network selects which to activate per input 
+
+-Improves efficiency but remains flat due to one pass 
+
+-Google’s mixture of recursions introduces recursive expert calls, anbling dynamic reasoning chains, these are typically linear or sequential, optimized for symbolic or temporal reasoning tasks 
+
+-They lack explicit modeling of relationships between experts themselves, for instance, how information should transition between specialists handling distinct subproblems 
+
+-Each edge encodes transition policies 
+
+-Gating mechanism operates not as a simple router but as a graph traversal policy 
+
+-Trained to discover efficient and semantically meaningful pathways across experts 
+
+-Learns compositional workflows rather than isolated specializations 
+
+-Mention vesuvius relation 
+
+\hfill
+
+\textbf{3 Model Architecture}
+
+Here we formalize GoE as a modular pipeline. We cleanly separate input stems, modality-sepecific adapters that transform
+raw data into tokens with positions/scale, from a task-agnostic encoder that adds local/global context and emits per-token
+content embeddings $h$ (for experts) and routing features $e$ (for the graph router). The GoE core then performs sparse
+traversal over a library of lightweight experts under a learned graph router, allocating computation by difficulty and
+recording path provenance. Task heads are pluggable and minimal (used only for supervision/inference), so stems and heads
+change with the domain while the GoE core is identical. 
+
+\hfill
+
+\textbf{3.1 Input Stem}
+
+Given a raw input $x$, the input stem should produce some sequence of tokens, $T \in \mathbb{R}^{B \times N \times d}$, as
+well as the auxiliary routing features for the graph router, $A \in \mathbb{R}^{B \times N \times d_a}$. The input stem is
+the only component of the system that is modality-specific, as it is the modality adapter for the problem.
+
+\hfill
+
+\textbf{3.2 Encoder}
+
+The encoder provides global context for the auxiliary routing data with modality-specific methods. Given input from the
+input stem, the encoder produces multi-level feature maps, $F^0, \ldots F^L$, with $F^L$ being the least dimensional
+feature map. This is executed by using repeatable G-Blocks with residuals. The encoder then installs a slight attention
+mechanism to ensure multi-modality multi-reasoning. It should be fused minimally via a content embedding. Routing features
+should also be extracted from the auxiliary routing features.
+
+\hfill
+
+\textbf{3.3 Graph Router}
+
+Experts $\{f_k\}_{k=1..M}$ are generally trainable neural circuits with parameter efficient adapters for modality hints.
+
+\hfill
+
+\textbf{3.4 Experts}
+-include training section
+
+\hfill
+
+\textbf{3.5 Traversal}
+
+\hfill
+
+\textbf{3.6 Task Heads and Losses}
+
+\section*{Conflict of interests}
+\label{sec:CONFLICT-OF-INTERESTS}
+The authors should declare here any potential conflicts of interests.
+
+\section*{Acknowledgments (optional)}
+\label{sec:ACKNOWLEDGMENTS}
+The authors would like to thank XXX and YYY for their helpful feedback.
+
+\section*{Funding (optional)}
+\label{sec:FUNDING}
+This work was supported by the XXX agency (grant number: XXX).
+
+\section*{Availability of data and software code (optional and strongly suggested)}
+\label{sec:AVAILABILITY}
+Our software code is available at the following URL: XXX.
+\newline
+\indent Our dataset is available at the following URL: XXX.
+
+
+\footnotesize
+\bibliographystyle{unsrt}
+\bibliography{bibliography_CIBB_file.bib} 
+\normalsize
+
+\end{document}
