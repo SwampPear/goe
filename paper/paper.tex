@@ -1,15 +1,4 @@
 \documentclass[12pt,a4paper]{cibb}
-\setlength{\parindent}{0pt}
-
-% Fallback definition for missing \@ordinalM
-\makeatletter
-\providecommand{\@ordinalM}[2]{#1}
-\makeatother
-
-\usepackage{etoolbox}
-\makeatletter
-\patchcmd{\@startsection}{\@afterindenttrue}{\@afterindentfalse}{}{}
-\makeatother
 
 \usepackage{subfigure,graphicx}
 \usepackage{amsmath,amsfonts,latexsym,amssymb,euscript,xr}
@@ -20,23 +9,21 @@
 \usepackage[english]{datenumber}
 \usepackage[absolute]{textpos}
 
-
-
 \usepackage[table]{xcolor}
 \usepackage{color,colortbl,tabularx}
 
 \usepackage[english]{babel}
 \usepackage[protrusion=true,expansion=true]{microtype}
 \usepackage{amsmath,amsfonts,amsthm}
-% \usepackage[pdftex]{graphicx}
 \usepackage{pifont}
+\usepackage{verbatim}
+\usepackage{mathrsfs}
+\usepackage{enumitem}
 
 \def\red{\color{red}}
 \def\black{\color{black}}
 \def\blue{\color{blue}}
 \def\magenta{\color{magenta}}
-
-
 
 \definecolor{LightBlue}{rgb}{0.88,0.9,0.9}
 
@@ -47,15 +34,13 @@
   \endgroup
 }
 
-\title{\Large $\ $\\ \bf GoE (Graph-of-Experts): Trainable Graphs for Hierarchical Multi-Scale Reasoning}
+\title{\Large $\ $\\ \bf Graph-of-Experts: Trainable Graphs for Hierarchical Multi-Scale Reasoning}
 
 \author{\large Michael Vaden$^{1, 2}$}
 \address{\footnotesize $\ $\\$^1$ Independent Researcher, Atlanta, USA
 $\ $\\$^2$ College of Computing, Georgia Institute of Technology, Atlanta, USA
-\newline
-$^*$corresponding author: mvaden6@gatech.edu, michaelvaden.mjv@gmail.com
+$\ $\\$^*$corresponding author: mvaden6@gatech.edu, michaelvaden.mjv@gmail.com
 }
-
 
 \abstract{\small Mixture of Experts, Graph Networks, Transformers \normalsize
 \\[17pt]
@@ -90,9 +75,9 @@ $^*$corresponding author: mvaden6@gatech.edu, michaelvaden.mjv@gmail.com
 
 \thispagestyle{myheadings}
 \pagestyle{myheadings}
-\markright{\tt}%check year
+\markright{}
 
-\textbf{1 Introduction}
+\noindent \textbf{1 Introduction}
 
 -hierarchical problems require systems that adapt across levels of abstraction 
 
@@ -118,9 +103,9 @@ $^*$corresponding author: mvaden6@gatech.edu, michaelvaden.mjv@gmail.com
 
 -Add experiment info
 
-\hfill
+\vspace{8pt}
 
-\textbf{2 Background}
+\noindent \textbf{2 Background}
 
 -Recent progress in adaptive architectures explores dividing neural computation into specialized components  
 
@@ -128,7 +113,7 @@ $^*$corresponding author: mvaden6@gatech.edu, michaelvaden.mjv@gmail.com
 
 -Improves efficiency but remains flat due to one pass 
 
--Google’s mixture of recursions introduces recursive expert calls, anbling dynamic reasoning chains, these are typically linear or sequential, optimized for symbolic or temporal reasoning tasks 
+-Google's mixture of recursions introduces recursive expert calls, anbling dynamic reasoning chains, these are typically linear or sequential, optimized for symbolic or temporal reasoning tasks 
 
 -They lack explicit modeling of relationships between experts themselves, for instance, how information should transition between specialists handling distinct subproblems 
 
@@ -141,77 +126,248 @@ $^*$corresponding author: mvaden6@gatech.edu, michaelvaden.mjv@gmail.com
 -Learns compositional workflows rather than isolated specializations 
 
 -Mention vesuvius relation 
+\\
 
-\hfill
-
-\textbf{3 Model Architecture}
+\noindent \textbf{3 Model}
 
 Here we formalize GoE as a modular pipeline. We cleanly separate input stems, modality-sepecific adapters that transform
-raw data into tokens with positions/scale, from a task-agnostic encoder that adds local/global context and emits per-token
-content embeddings $h$ (for experts) and routing features $e$ (for the graph router). The GoE core then performs sparse
-traversal over a library of lightweight experts under a learned graph router, allocating computation by difficulty and
-recording path provenance. Task heads are pluggable and minimal (used only for supervision/inference), so stems and heads
-change with the domain while the GoE core is identical. 
+raw data into tokens with positions/scale, from a task-agnostic encoder that adds local/global context and emits 
+per-token content embeddings $h$ (for experts) and routing features $e$ (for the graph router). The GoE core then 
+performs sparse traversal over a library of lightweight experts under a learned graph router, allocating computation by 
+difficulty and recording path provenance. Task heads are pluggable and minimal (used only for supervision/inference), so 
+stems and heads change with the domain while the GoE core is identical. 
+\\
 
-\hfill
+\noindent \textbf{3.1 Architecture}
 
-\textbf{3.1 Input Stem}
+Here we formalize GoE as a modular pipeline. We cleanly separate input stems, modality-sepecific adapters that transform
+raw data into tokens with positions/scale, from a task-agnostic encoder that adds local/global context and emits 
+per-token content embeddings $h$ (for experts) and routing features $e$ (for the graph router). The GoE core then 
+performs sparse traversal over a library of lightweight experts under a learned graph router, allocating computation by 
+difficulty and recording path provenance. Task heads are pluggable and minimal (used only for supervision/inference), so 
+stems and heads change with the domain while the GoE core is identical. 
+\\
 
-Given a raw input $x$, the input stem should produce some sequence of tokens, $T \in \mathbb{R}^{B \times N \times d}$, as
-well as the auxiliary routing features for the graph router, $A \in \mathbb{R}^{B \times N \times d_a}$. The input stem is
-the only component of the system that is modality-specific, as it is the modality adapter for the problem.
+\noindent \textbf{3.1.1 Input Stem}
 
-\hfill
+The input stem acts as a modality adapter responsible for transforming data into a standardized latent and tokenized
+representation. Regardless of data modality, the stem should perform three fundamental operations: \textit{projection}, 
+\textit{normalization}, and \textit{tokenization}. Given an input batch
+\[
+\begin{aligned}
+  x \in \mathbb{R}^{[B, N, \ldots]}
+\end{aligned}
+\]
+\noindent with batch size $B$, channel count $C$, and remaining modality-dependent dimensions, the stem maps $x$ into a
+latent representation
+\[
+\begin{aligned}
+  f_0 = \phi(x; \theta_s)
+\end{aligned}
+\]
+\noindent where $\phi(\cdot)$ is a parameterized feature extractor. For example the feature extractor could be a
+convolutional stack for spatial data, a temporal encoder for sequences, or a feed-forward projection for tabular inputs.
+Common building blocks should ensure local correlations are captured while preserving feature magnitude and typically 
+are of the form 
+$Linear/Conv/Embedding \rightarrow Norm \rightarrow Activation$.
 
-\textbf{3.2 Encoder}
+The resulting latent $f_0$ is then tokenized by partitioning or sampling the representation into discrete tokens:
+\[
+\begin{aligned}
+  t_i = W_t \psi(f_0, \Omega_i) + b_t, \hspace{16pt} T = \{t_1, \ldots, t_N\}
+\end{aligned}
+\]
+where $\psi(\cdot, \Omega_i)$ extracts the subset, patch, or time segment corresponding to the $i$-th token and $W_t$
+projects it into a shared embedding space of dimension $d$. This process yields a modality-independent token set
+$T \in \mathbb{R}^{B, N, d}$. By decoupling the feature extraction and tokenization mechanisms from any specific input 
+structure, the input stem acts as a general adapter capable of ingesting multimodal data into a coherent token space.
 
-The encoder provides global context for the auxiliary routing data with modality-specific methods. Given input from the
-input stem, the encoder produces multi-level feature maps, $F^0, \ldots F^L$, with $F^L$ being the least dimensional
-feature map. This is executed by using repeatable G-Blocks with residuals. The encoder then installs a slight attention
-mechanism to ensure multi-modality multi-reasoning. It should be fused minimally via a content embedding. Routing features
-should also be extracted from the auxiliary routing features.
+In addition to token generation, the input stem produces a compact set of auxiliary routing features 
+$r \in \mathbb{R}^{B, N, d_r}$ derived from the same latent representation $f_0$. These features capture 
+modality-specific cues that assist the graph router in discovering expert pathways. The pair $(T, r)$ thus forms the 
+complete standardized output of the input stem, supplying both the content and contextual signals required for 
+downstream expert selection.
+\\
 
-\hfill
+\noindent \textbf{3.1.2 Modality-Agnostic Encoder}
 
-\textbf{3.3 Graph Router}
+After tokenization, the encoder operates on the unified token set, $T = \{t_1,\ldots,t_N\}$, and learns contextual 
+relationships among tokens regardless of their original modality. Its design emphasizes domain invariance, allowing for
+encoding dependencies across modalities. Formally, the encoder applies a sequence of permutation-invariant 
+transformations
+\[
+\begin{aligned}
+  T' = \Phi(T; \theta_e)
+\end{aligned}
+\]
+where $\Phi$ may consist of stacked self-attention layers followed by normalization and residual feed-forward networks.
+\[
+\begin{aligned}
+  \text{LayerNorm} \rightarrow \text{MultiHeadAttention}(Q,K,V) \rightarrow \text{Residual} \rightarrow 
+  \text{FeedForward} \rightarrow \text{Residual}
+\end{aligned}
+\]
+Each attention head computes
+\[
+\begin{aligned}
+  \text{Attn}(Q,K,V) = \text{softmax}(\frac{QK^\top}{\sqrt{d_k}})V
+\end{aligned}
+\]
+\noindent allowing the encoder to dynamically weight relationships among tokens based on learned similarity.
 
-Experts $\{f_k\}_{k=1..M}$ are generally trainable neural circuits with parameter efficient adapters for modality hints.
+The modality-agnostic encoder functions as the system's universal relational core. It captures token dependencies in a 
+invariantly to the original data modality, enabling shared reasoning across heterogeneous inputs. Downstream modules
+operate on these enriched token embeddings, promoting flexibility and cross-domain transfer.
+\\
 
-\hfill
+\noindent \textbf{3.1.3 Graph Router}
 
-\textbf{3.4 Experts}
--include training section
+The graph router defines a dynamic computation graph
+\[
+\begin{aligned}
+  \mathcal{G} = (\mathcal{V}, \mathcal{E}), |\mathcal{V}| = M
+\end{aligned}
+\]
+\noindent where each node $v_m \in \mathcal{V}$ corresponds to an expert module, and each directed edge 
+$e \in \mathcal{E}$ represents learned dependencies between experts. For each input token $t_i'$ and its auxiliary 
+routing features $a_i$ a combined descriptor
+\[
+\begin{aligned}
+  r_i = [t_i'][a_i]
+\end{aligned}
+\]
+\noindent is used to compute an entry distribution over experts
+\[
+\begin{aligned}
+  p_i = \text{softmax}(W_rr_i + b_r), p_i \in \mathbb{R}^M
+\end{aligned}
+\]
+\noindent where $p_{i, m}$ indicates how strongly token $i$ is routed to expert $m$. Once tokens enter the graph, they 
+propagate through connected experts according to the learned edge weights $A_{mn}$
+\[
+\begin{aligned}
+  h_m^{l + 1} = \rho(\sum_{n \in \mathcal{N}(m)} A_{mn}W_nh_n^l)
+\end{aligned}
+\]
+\noindent where $A$ may be static (learned during training) or dynamically updated via attention over expert embeddings. 
+This enables experts to share context, refine intermediate representations, or coordinate when multiple experts 
+specialize in related subspaces. Routing can thus be interpreted as probabilistic traversal through the expert graph
+based on three principles:
+\begin{enumerate}[itemsep=-4pt]
+  \item[1.] \textit{Auxiliary features} bias the entry points.
+  \item[2.] \textit{Graph topology} defines how expertise flows among related experts.
+  \item[3.] \textit{Router distribution} $p_i$ determines which paths are activated for each token.
+\end{enumerate}
 
-\hfill
+This formulation allows computation to be selective, structured, and interpretable: experts form the nodes of a learned 
+relational system, and data tokens dynamically navigate it based on both semantic content and contextual metadata.
+\\
 
-\textbf{3.5 Traversal}
+\noindent \textbf{3.1.4 Experts}
 
-\hfill
+Each node $v_m \in \mathcal{V}$ of the expert graph represents a specialized processing unit trained to perform a 
+distinct transformation on routed token representations. Collectively, these experts form a distributed reasoning system 
+in which specialization emerges from data-driven routing rather than manual assignment. Formally, every expert 
+implements a parameterized function
+\[
+\begin{aligned}
+  h_m^{l+1} = f_m(h^l_m; \theta_m)
+\end{aligned}
+\]
+where $h_m^l$ is the set (or mean) of token embeddings arriving at node $m$ during layer $l$. The internal structure of 
+$f_m$ is modality-independent—it can be a small transformer block, an MLP, a convolutional unit, or any lightweight 
+operator suited to the representation space.
 
-\textbf{3.6 Task Heads and Losses}
+Routing probabilities from Section 3.3 determine which tokens reach each expert:
+\[
+\begin{aligned}
+  \widetilde{h}_m = \sum_i p_{i,m}W_{p}r_{i}
+\end{aligned}
+\]
+aggregating routed inputs according to their gating weights $p_{i,m}$. Experts update their local states through a 
+combination of internal processing and graph message passing:
+\[
+\begin{aligned}
+  h_m^{l+1} = f_m(\widetilde{h}_m;\theta_m) + \sum_{n \in \mathcal{N}(m)} A_{mn}W_ch^l_n
+\end{aligned}
+\]
+where $A_{mn}$ encodes inter-expert communication strength and $W_c$ projects incoming context from neighboring experts.
 
+During training, load-balancing and entropy regularizers encourage even utilization and discourage collapse to a single 
+dominant expert:
+\[
+\begin{aligned}
+  \mathcal{L}_{\text{balance}} &= \lambda_b\sum_m (\frac{1}{B}\sum_i p_{i,m} - \frac{1}{M})^2\\
+  \mathcal{L}_{\text{entropy}} &= -\lambda_e\sum_i\sum_m p_{i,m}\log p_{i,m}
+\end{aligned}
+\]
+These terms ensure diverse specialization while maintaining differentiability for end-to-end learning.
+
+The expert layer therefore acts as a distributed knowledge substrate: each expert learns to focus on a coherent subset 
+of representations, yet coordination through the graph preserves global consistency. This structure supports both 
+horizontal specialization (different skills in parallel) and vertical specialization (multi-stage refinement across 
+connected experts).
+\\
+
+\noindent \textbf{3.1.5 Recursive Expert Refinement} 
+
+To enable progressive reasoning and self-correction, the architecture employs a recursive refinement mechanism in which 
+expert activations are iteratively updated based on their own outputs and feedback from neighboring experts. Rather than 
+processing each token once, the system performs multiple refinement cycles
+\[
+\begin{aligned}
+  H^{k+1} = \mathcal{F}(H^k;\theta_{\text{exp}};\theta_{\text{router}}), k=0, \ldots K-1
+\end{aligned}
+\]
+where $H^k = \{h_1^k,\ldots h_M^k\}$ represent all expert states after iteration $k$. During each cycle three actions 
+are performed:
+\begin{enumerate}
+  \item[1.] \textit{Re-routing}: Updated token embeddings are re-evaluated by the graph router using current auxiliary 
+  cues to adjust their expert assignments
+  \[
+    \begin{aligned}
+      p_i^{k+1} = \text{softmax}(W_r[r_i^k] + b_r)
+    \end{aligned}
+  \]
+  allowing the computation graph to evolve dynamically as uncertainty decreases.
+  \item[2.] \textit{Expert update}: Each expert processes its new incoming messages
+  \[
+    \begin{aligned}
+      h_i^{k+1} = f_m(\sum_i p_{i,m}^{k+1} W_p r_i^k, h_{\mathcal{N}(m)}^k;\theta_m)
+    \end{aligned}
+  \]
+  combining local evidence with context from adjacent experts.
+  \item[3.] \textit{Convergence check}: A lightweight confidence head evaluates per-token uncertainty
+  \[
+    \begin{aligned}
+      u_i^k = \rho(W_u r_i^k)
+    \end{aligned}
+  \]
+  and recursion halts when $||u^k - u^{k-1}||_2 < \epsilon$ or after a fixed depth $K$.
+\end{enumerate}
+This iterative process lets the system focus compute where ambiguity remains—tokens with stable expert assignments 
+converge quickly, while uncertain regions receive additional refinement passes.
+
+The recursive design unifies iterative inference and conditional computation: information flows repeatedly through the 
+expert graph, allowing specialists to exchange context and correct earlier approximations. In practice, this produces 
+smoother, more consistent outputs while maintaining computational efficiency through early stopping.
+\\
+
+\noindent \textbf{3.6 Decoder / Output Head}
+\begin{comment}
 \section*{Conflict of interests}
-\label{sec:CONFLICT-OF-INTERESTS}
 The authors should declare here any potential conflicts of interests.
 
 \section*{Acknowledgments (optional)}
-\label{sec:ACKNOWLEDGMENTS}
 The authors would like to thank XXX and YYY for their helpful feedback.
 
 \section*{Funding (optional)}
-\label{sec:FUNDING}
 This work was supported by the XXX agency (grant number: XXX).
 
 \section*{Availability of data and software code (optional and strongly suggested)}
-\label{sec:AVAILABILITY}
 Our software code is available at the following URL: XXX.
 \newline
 \indent Our dataset is available at the following URL: XXX.
-
-
-\footnotesize
-\bibliographystyle{unsrt}
-\bibliography{bibliography_CIBB_file.bib} 
-\normalsize
+\end{comment}
 
 \end{document}
