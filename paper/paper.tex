@@ -140,73 +140,58 @@ stems and heads change with the domain while the GoE core is identical.
 
 \noindent \textbf{3.1 Architecture}
 
-Here we formalize GoE as a modular pipeline. We cleanly separate input stems, modality-sepecific adapters that transform
-raw data into tokens with positions/scale, from a task-agnostic encoder that adds local/global context and emits 
-per-token content embeddings $h$ (for experts) and routing features $e$ (for the graph router). The GoE core then 
-performs sparse traversal over a library of lightweight experts under a learned graph router, allocating computation by 
-difficulty and recording path provenance. Task heads are pluggable and minimal (used only for supervision/inference), so 
-stems and heads change with the domain while the GoE core is identical. 
-\\
-
 \noindent \textbf{3.1.1 Input Stem}
 
-The input stem acts as a modality adapter responsible for transforming data into a standardized latent and tokenized
-representation. Regardless of data modality, the stem should perform three fundamental operations: \textit{projection}, 
+The input stem acts as a modality adapter for transforming data into standardized latent and tokenized representations. 
+Regardless of data modality, the stem should execute three fundamental operations: \textit{projection}, 
 \textit{normalization}, and \textit{tokenization}. Given an input batch
 \[
 \begin{aligned}
-  x \in \mathbb{R}^{[B, N, \ldots]}
+  x \in \mathbb{R}^{[B, C, \ldots]}
 \end{aligned}
 \]
-\noindent with batch size $B$, channel count $C$, and remaining modality-dependent dimensions, the stem maps $x$ into a
+\noindent with batch size $B$, channel count $C$, and remaining modality-dependent dimensions, $x$ is mapped into the
 latent representation
 \[
 \begin{aligned}
   f_0 = \phi(x; \theta_s)
 \end{aligned}
 \]
-\noindent where $\phi(\cdot)$ is a parameterized feature extractor. For example the feature extractor could be a
-convolutional stack for spatial data, a temporal encoder for sequences, or a feed-forward projection for tabular inputs.
-Common building blocks should ensure local correlations are captured while preserving feature magnitude and typically 
-are of the form 
-$Linear/Conv/Embedding \rightarrow Norm \rightarrow Activation$.
+\noindent where $\phi(\cdot)$ is a parameterized feature extractor (e.g. convolutional stack for spatial data, temporal
+encoder for sequences, e.t.c.). Common extractor pattern should ensure local correlations are captured while preserving 
+feature magnitude and typically are of the form $Linear/Conv/Embedding \rightarrow Norm \rightarrow Activation$.
 
-The resulting latent $f_0$ is then tokenized by partitioning or sampling the representation into discrete tokens:
+The resulting latent representation, $f_0$, is then tokenized by partitioning or sampling the representation into 
+discrete tokens:
 \[
 \begin{aligned}
   t_i = W_t \psi(f_0, \Omega_i) + b_t, \hspace{16pt} T = \{t_1, \ldots, t_N\}
 \end{aligned}
 \]
-where $\psi(\cdot, \Omega_i)$ extracts the subset, patch, or time segment corresponding to the $i$-th token and $W_t$
-projects it into a shared embedding space of dimension $d$. This process yields a modality-independent token set
-$T \in \mathbb{R}^{B, N, d}$. By decoupling the feature extraction and tokenization mechanisms from any specific input 
-structure, the input stem acts as a general adapter capable of ingesting multimodal data into a coherent token space.
+where $\psi(\cdot, \Omega_i)$ extracts the data slice (e.g. voxels, patches, temporal sequences, e.t.c.) orresponding to 
+the $i$-th token and $W_t$ projects it into a shared embedding space of dimension $d$. This process yields a 
+modality-independent token set $T \in \mathbb{R}^{B, N, d}$. By decoupling the feature extraction and tokenization 
+mechanisms from any specific input structure, the input stem acts as a general adapter capable of ingesting multimodal 
+data into a coherent token space.
 
 In addition to token generation, the input stem produces a compact set of auxiliary routing features 
-$r \in \mathbb{R}^{B, N, d_r}$ derived from the same latent representation $f_0$. These features capture 
-modality-specific cues that assist the graph router in discovering expert pathways. The pair $(T, r)$ thus forms the 
-complete standardized output of the input stem, supplying both the content and contextual signals required for 
-downstream expert selection.
+$e \in \mathbb{R}^{[B, N, d_r]}$ derived from the same latent representation $f_0$. These features capture 
+modality-specific cues that assist the graph router in discovering expert pathways. The complete standardized output
+of the input stem is $(T, r)$.
 \\
 
 \noindent \textbf{3.1.2 Modality-Agnostic Encoder}
 
-After tokenization, the encoder operates on the unified token set, $T = \{t_1,\ldots,t_N\}$, and learns contextual 
-relationships among tokens regardless of their original modality. Its design emphasizes domain invariance, allowing for
-encoding dependencies across modalities. Formally, the encoder applies a sequence of permutation-invariant 
-transformations
+The encoder operates on the token set, $T = \{t_1,\ldots,t_N\}$, and learns the contextual relationships among tokens. 
+Its design emphasizes domain invariance, allowing for encoding dependencies across modalities. Formally, the encoder 
+applies a sequence of permutation-invariant transformations
 \[
 \begin{aligned}
   T' = \Phi(T; \theta_e)
 \end{aligned}
 \]
-where $\Phi$ may consist of stacked self-attention layers followed by normalization and residual feed-forward networks.
-\[
-\begin{aligned}
-  \text{LayerNorm} \rightarrow \text{MultiHeadAttention}(Q,K,V) \rightarrow \text{Residual} \rightarrow 
-  \text{FeedForward} \rightarrow \text{Residual}
-\end{aligned}
-\]
+where $\Phi$ consists of stacked self-attention layers followed by normalization and residual feed-forward networks of
+the form $\text{LayerNorm} \rightarrow \text{MultiHeadAttention}(Q,K,V) \rightarrow \text{Residual} \rightarrow \text{FeedForward} \rightarrow \text{Residual}$.
 Each attention head computes
 \[
 \begin{aligned}
@@ -215,14 +200,14 @@ Each attention head computes
 \]
 \noindent allowing the encoder to dynamically weight relationships among tokens based on learned similarity.
 
-The modality-agnostic encoder functions as the system's universal relational core. It captures token dependencies in a 
+The modality-agnostic encoder functions as the system's universal relational core. It captures token dependencies 
 invariantly to the original data modality, enabling shared reasoning across heterogeneous inputs. Downstream modules
-operate on these enriched token embeddings, promoting flexibility and cross-domain transfer.
+operate on these enriched token embeddings, promoting cross-domain transfer.
 \\
 
 \noindent \textbf{3.1.3 Graph Router}
 
-The graph router defines a dynamic computation graph
+The graph router defines a directed graph
 \[
 \begin{aligned}
   \mathcal{G} = (\mathcal{V}, \mathcal{E}), |\mathcal{V}| = M
@@ -230,13 +215,8 @@ The graph router defines a dynamic computation graph
 \]
 \noindent where each node $v_m \in \mathcal{V}$ corresponds to an expert module, and each directed edge 
 $e \in \mathcal{E}$ represents learned dependencies between experts. For each input token $t_i'$ and its auxiliary 
-routing features $a_i$ a combined descriptor
-\[
-\begin{aligned}
-  r_i = [t_i'][a_i]
-\end{aligned}
-\]
-\noindent is used to compute an entry distribution over experts
+routing features $e_i$ is transformed into combined descriptor $r_i = [t_i';a_i]$, used to compute an entry distribution 
+over experts
 \[
 \begin{aligned}
   p_i = \text{softmax}(W_rr_i + b_r), p_i \in \mathbb{R}^M
