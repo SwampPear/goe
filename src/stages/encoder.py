@@ -88,8 +88,6 @@ class Encoder(layers.Layer):
 
     def call(self, T, a, mask=None, training=False) -> Tuple[tf.Tensor, tf.Tensor]:
         """
-        Run the encoder.
-
         Steps:
           (1) T'   = phi(T; theta_e) via stacked Transformer blocks with shared mask
           (2) a_t  = LN(Dense(a)) # normalize and project a
