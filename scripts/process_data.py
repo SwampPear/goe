@@ -6,7 +6,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import argparse
 from typing import List
-from src.config import config
+from src.utils.config import config
 from src.io.loading import download_files, load_tiff_as_zarr
 from src.io.saving import write_tfrecord
 from src.processing.features import process_features

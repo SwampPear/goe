@@ -17,7 +17,6 @@ try:
 except Exception:
     tqdm = None
 
-
 def _load_tiff_as_zarr(path: str, series: int = 0, level: int = 0, pick_channel: Optional[int] = None,
 ) -> Tuple[Any, Tuple[float, float], Dict[str, Any]]:
     """

@@ -19,7 +19,7 @@ try:
 except Exception:
     tqdm = None
 
-from src.config import config
+from src.utils.config import config
 
 
 def _download_file(session: requests.Session, url: str, scroll_idx: int):
@@ -52,7 +52,7 @@ def _download_file(session: requests.Session, url: str, scroll_idx: int):
         tmp.replace(dest)
 
 
-class DataConnection:
+class DataServer:
     def __init__(self, scroll: int):
         self.scroll_idx = scroll - 1
 

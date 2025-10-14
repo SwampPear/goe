@@ -5,8 +5,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import argparse
 from urllib.parse import urljoin
-from src.config import config
-from src.data.server import DataConnection
+from src.utils.config import config
+from src.data.server import DataServer
 
 def main():
     ap = argparse.ArgumentParser(description="Loads data from the Vesuvius Challenge data server.")
@@ -19,9 +19,8 @@ def main():
     start = args.start
     count = args.count
 
-    dc = DataConnection(scroll)
-    dc.download_files(start=start, count=count)
-
+    server = DataConnection(scroll)
+    server.download_files(start=start, count=count)
 
 if __name__ == '__main__':
     main()
