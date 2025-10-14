@@ -1,0 +1,90 @@
+% --------------------------------------------------------
+% Authors: 
+% Michael Vaden (mvaden6@gatech.edu, michaelvaden.mjv@gmail.com)
+%
+% --------------------------------------------------------
+
+\documentclass[9pt,twoside]{rmaa-rho-class/rmaa-rho}
+\usepackage{fancyhdr}
+% \RMxAAtemplatetype{\RMxAA}
+
+\newcommand{\CS}[1]{\texttt{\textbackslash #1}}
+
+%----------------------------------------------------------
+% JOURNAL/HEADER INFORMATION
+%----------------------------------------------------------
+
+% \vol{61}
+% Counter page
+% \setcounter{page}{30}
+% \pages{30-36}
+% \thisyear{2025}
+% \doi{\href{https://www.astroscu.unam.mx/rmaa/RMxAA..XX-X}{https://www.astroscu.unam.mx/rmaa/RMxAA..XX-X}}
+
+\newenvironment{Example}
+{\begin{list}{}{\setlength{\leftmargin}{10pt}\setlength{\rightmargin}{10pt}}%
+  \item[]\itshape}
+  {\end{list}}
+
+%----------------------------------------------------------
+% TITLE
+%----------------------------------------------------------
+
+\title{rMoE for Robust Recovery Across Modalities}
+
+%----------------------------------------------------------
+% AUTHORS AND AFFILIATIONS
+%----------------------------------------------------------
+
+\author[1,$\dagger$]{M. Vaden \orcidlink{0000-0001-8600-4798}} % TODO: update orcid
+
+%----------------------------------------------------------
+
+% TODO: update this\affil[1]{Universidad Nacional Autónoma de México, Instituto de Astronomía, AP 106,  Ensenada 22800, BC, México}
+
+%----------------------------------------------------------
+% CORRESPONDING AUTHOR INFORMATION
+%----------------------------------------------------------
+
+\leadauthor{M. Vaden}
+\smalltitle{LaTex Macro RMxAA}
+
+%----------------------------------------------------------
+% ARTICLE INFORMATION
+%----------------------------------------------------------
+
+\corres{Michael Vaden}
+\email{mvaden6@gatech.edu, michaelvaden.mjv@gmail.com}
+
+%\revised{April 16, 2024}
+%\published{May 21, 2024}
+
+\license{Texto de la licencia aquí}
+
+% incluir Resumen y Abstract
+
+\setbool{rho-abstract}{true} % Set false to hide the abstract
+\setbool{rho-resumen}{false} % Set false to hide the abstract
+
+%----------------------------------------------------------
+% ABSTRACT AND kEYWORDS
+%----------------------------------------------------------
+
+\begin{abstract}
+    This document (\texttt{rmxaa$\_$main.tex}---last updated August 2025) provides a brief tutorial on the use of version 4.1 of the macros and can also serve as  a template for the preparation of papers to be published in the Main Journal of the Revista Mexicana de Astronomía y Astrofísica. It provides brief tutorial information and common rules for authors. We have included information about the section content, as well as examples of the figures, tables, and code lines. We are making use of the rho($\rho$) \LaTeX ~class, specially designed for academic purposes. It is assumed that you are already familiar with the rudiments of \LaTeX{}. In case you are not, we recommend the manuals provided by Overleaf (\url{https://www.overleaf.com/learn/latex/Tutorials}).
+\end{abstract}
+
+\begin{resumen}
+    Este documento (\texttt{rmxaa$\_$main.tex}--- última actualización Agosto, 2025) describe de manera breve el uso de la versión 4.1 de los macros funciona como un templete común para la preparación de artículos que se deseen publicar en la parte principal de la Revista Mexicana de Astronomía y Astrofísica. El documento provee textos instructivos breves y reglas básicas para los autores. hemos incluído información sobre el contenido de las secciones, así como ejemplos de figuras, tablas y la inclusión de líneas de código. Se hace uso de la clase rho ($\rho$) \LaTeX, especialmente diseñada para propósitos académicos. Se asume que el autor está familiarizado con los rudimentos de \LaTeX{}. En caso de que no sea así, recomendamos los manuales que provee la plataforma Overleaf (\url{https://www.overleaf.com/learn/latex/Tutorials}).
+\end{resumen}
+
+\keywords{keyword 1, keyword 2, keyword 3, keyword 4, keyword 5}
+
+%----------------------------------------------------------
+
+\begin{document}
+
+\maketitle
+\pagestyle{fancy}\thispagestyle{firststyle}
+
+\end{document}
