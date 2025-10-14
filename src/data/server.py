@@ -106,7 +106,6 @@ class DataServer:
         latest_dir = str(max(dated_dirs))
 
         # list tiff file paths
-        print(latest_dir)
         url = urljoin(url, latest_dir)
 
         files = self._listdir(url)
@@ -120,8 +119,7 @@ class DataServer:
     def download_files(self, start: int = 0, count: int = 4, concurrency: int = 4):
         """Concurrently downloads files from the data server."""
         # path slice
-        offset = start + count
-        end = min(len(self.files), start + count)
+        end = min(len(self.files["files"]), start + count)
         files = self.files["files"][start:end]
 
         # http adapteer (keep-alive pool)

@@ -19,7 +19,7 @@ def main():
     start = args.start
     count = args.count
 
-    server = DataConnection(scroll)
+    server = DataServer(scroll)
     server.download_files(start=start, count=count)
 
 if __name__ == '__main__':
