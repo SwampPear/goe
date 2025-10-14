@@ -24,7 +24,7 @@ class TransformerBlock(layers.Layer):
         return x
 
 
-class ModalityAgnosticEncoder(layers.Layer):
+class Encoder(layers.Layer):
     def __init__(self, d_model=256, num_heads=8, ff_dim=512, num_layers=4, d_aux=64, dropout=0.1):
         super().__init__()
         self.encoder_layers = [
