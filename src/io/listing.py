@@ -1,62 +1,86 @@
-from bs4 import BeautifulSoup
+from __future__ import annotations
+import os
+import sys
+import time
+import math
+import hashlib
 import requests
+import numpy as np
+from pathlib import Path
+from bs4 import BeautifulSoup
+import tifffile as tiff, zarr, numcodecs
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 from urllib.parse import urljoin
-from typing import List
+from typing import Optional, Dict, Any, List
+
+# progress bar
+try:
+    from tqdm import tqdm
+except Exception:
+    tqdm = None
+
+from src.config import config
 
 
-def _autoindex_listdir(url: str) -> List[str]:
-    """
-    List dirs from a parsed autoindex style website.
+class DataConnection:
+    def __init__(self, scroll):
+        self.scroll_idx = scroll - 1
 
-    Args:
-        url - website url
-    """
-    # request html page
-    res = requests.get(url, headers={"User-Agent": "scroll-rmoe/1.0"})
-    res.raise_for_status()
-    html = res.text
+        self.base_url = config("data", "urls")[scroll]
+        self.files = self.list_files()
 
-    # parse paths
-    soup = BeautifulSoup(html, "html.parser")
-    paths = []
-    for tr in soup.select("#list tbody tr"):
-        a = tr.select_one("td.link a")
+        print(self.files)
 
-        if not a:
-            continue
-
-        name = a.get_text(strip=True)
-        paths.append(name)
+    def _listdir(self, path):
+        """Lists directories parsed from autoindex style data server."""
         
-    return paths
+        # request page
+        url = urljoin(self.base_url, path)
+        res = requests.get(url)
+        res.raise_for_status()
+        html = res.text
 
-def list_volume_files(url: str) -> List[str]:
-    """
-    Lists all files under the latest volume dir on a the Vesuvius data server.
+        # parse paths
+        soup = BeautifulSoup(html, "html.parser")
+        paths = []
 
-    Args:
-        url - website url
-    """
+        for tr in soup.select("#list tbody tr"):
+            a = tr.select_one("td.link a")
 
-    # list files in volumes/
-    url = urljoin(url.rstrip("/") + "/", "volumes/")
-    paths = _autoindex_listdir(url)
+            if not a:
+                continue
 
-    # format timestamps and select latest acquisition
-    for i in range(len(paths)):
-        paths[i] = paths[i].rstrip("/").split("/")[-1]
+            name = a.get_text(strip=True)
+            paths.append(name)
+            
+        return paths
 
-        if paths[i] == ".vckeep":
-            paths.remove(paths[i])
 
-    latest = max(paths, key=lambda p: int(p))
+    def list_files(self) -> List[str]:
+        """Lists all files under the most recently update volumes/ dir on the data server."""
 
-    # update url to acquisition directory and acquire file paths
-    url = urljoin(url, str(latest) + "/")
-    paths = _autoindex_listdir(url)
+        # list files in volumes/
+        url = "volumes/"
+        paths = self._listdir(url)
 
-    # format full path names
-    for i in range(len(paths)):
-        paths[i] = url + paths[i]
+        # locate most recent dir
+        dated_dirs = []
+        for i in range(len(paths)):
+            paths[i] = paths[i].rstrip("/").split("/")[-1]
 
-    return paths
+            try:
+                dated_dir = int(paths[i])
+                dated_dirs.append(dated_dir)
+            except Exception:
+                pass
+
+        latest_dir = max(dated_dirs)
+
+        # list tiff file paths
+        url = urljoin(url, str(latest_dir))
+        files = self._listdir(url)
+
+        return files
+
+
+

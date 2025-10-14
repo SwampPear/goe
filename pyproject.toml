@@ -1,5 +1,5 @@
 [project]
-name = "scroll-rmoe"
+name = "goe"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -9,9 +9,6 @@ dependencies = [
     "numpy>=2.3.3",
     "pyyaml>=6.0.3",
     "requests>=2.32.5",
-    "scipy>=1.16.2",
-    "tensorflow>=2.20.0",
-    "tifffile>=2025.9.20",
-    "tqdm>=4.67.1",
+    "tifffile>=2025.10.4",
     "zarr>=3.1.3",
 ]

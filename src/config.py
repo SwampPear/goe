@@ -2,7 +2,7 @@ import yaml
 from typing import Dict, Any
 
 
-def load_config(config: str) -> Dict:
+def _load_config(config: str) -> Dict:
     """Loads a config object."""
     path = f"config/{config}.yaml"
 
@@ -11,5 +11,4 @@ def load_config(config: str) -> Dict:
 
 
 def config(config: str, key: str) -> Any:
-    cfg = load_config(f"data")
-    return cfg['urls']
+    return _load_config(config)[key]

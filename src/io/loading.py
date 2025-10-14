@@ -18,12 +18,7 @@ except Exception:
     tqdm = None
 
 
-def load_tiff_as_zarr(
-    path: str,
-    *,
-    series: int = 0,
-    level: int = 0,
-    pick_channel: Optional[int] = None,
+def _load_tiff_as_zarr(path: str, series: int = 0, level: int = 0, pick_channel: Optional[int] = None,
 ) -> Tuple[Any, Tuple[float, float], Dict[str, Any]]:
     """
     Returns:
@@ -86,7 +81,7 @@ def load_tiff_as_zarr(
 
     meta = {'shape': tuple(volume.shape), 'dtype': str(dtype), 'axes': meta_axes}
     return volume, vmin_vmax, meta
-    
+
 
 def download_files(paths: List[str], dest: str, scroll: int, start: int = 0, count: int = 32, concurrency: int = 4):
     """
@@ -170,39 +165,3 @@ def _coerce_to_zyx(arr, axes: Optional[str], pick_channel: Optional[int]):
             newZ = int(np.prod(a.shape[:-2]))
             a = a.reshape((newZ, a.shape[-2], a.shape[-1]))
     return a
-
-
-def _download_file(session: requests.Session, url: str, dest: Path, chunk=1<<20):
-    """
-    Downloads a single file.
-
-    Args:
-        session - http session
-        url - file url
-        dest - destination file path
-        chunk - download chunk
-    """
-
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    tmp = dest.with_suffix(dest.suffix + ".part")
-
-    # position header
-    headers = {}
-    pos = tmp.stat().st_size if tmp.exists() else 0
-    if pos > 0:
-        headers["Range"] = f"bytes={pos}-"
-    
-    # download file
-    with session.get(url, stream=True, timeout=60, headers=headers) as r:
-        # download error
-        if r.status_code not in (200, 206):
-            raise RuntimeError(f"GET {url} -> {r.status_code}")
-        
-        # write chunk
-        with open(tmp, "ab" if pos > 0 else "wb") as f:
-            for chunk_bytes in r.iter_content(chunk_size=chunk):
-                if chunk_bytes:
-                    f.write(chunk_bytes)
-
-    # atomic move
-    tmp.replace(dest)
