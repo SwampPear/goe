@@ -1,7 +1,8 @@
 struct.md
 .venv/
 __pycache__/
-data/
+data/processed/
+data/raw/
 ref/
 
 # latex processing

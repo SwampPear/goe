@@ -82,53 +82,6 @@ def _load_tiff_as_zarr(path: str, series: int = 0, level: int = 0, pick_channel:
     meta = {'shape': tuple(volume.shape), 'dtype': str(dtype), 'axes': meta_axes}
     return volume, vmin_vmax, meta
 
-
-def download_files(paths: List[str], dest: str, scroll: int, start: int = 0, count: int = 32, concurrency: int = 4):
-    """
-    Concurrently downloads files from a list of paths.
-
-    Args:
-        paths - list of paths in the data server directory
-        dest - destination directory
-        start - starting slice index of paths
-        count - number of files downloaded from start
-        concurrency - number of concurrent jobs
-    """
-    # path slice
-    offset = start + count
-    end = min(len(paths), offset)
-    paths = paths[start:end]
-
-    # http adapteer (keep-alive pool)
-    sess = requests.Session()
-    adapter = requests.adapters.HTTPAdapter(pool_connections=concurrency, pool_maxsize=concurrency, max_retries=2)
-    sess.mount("http://", adapter); sess.mount("https://", adapter)
-
-    # submit jobs
-    jobs = []
-    dest = Path(dest) / Path(str(scroll))
-
-    # concurrent requests
-    with ThreadPoolExecutor(max_workers=concurrency) as ex:
-        for path in paths:
-            # format file path
-            name = path.split("/")[-1] # file name
-            out_path = dest / name # 
-            if out_path.exists():
-                continue
-
-            # submit job
-            jobs.append(ex.submit(_download_file, sess, path, out_path))
-
-        it = as_completed(jobs)
-
-        # progress bar
-        if tqdm is not None:
-            it = tqdm(it, total=len(jobs), desc="Downloading", unit="file")
-        for fut in it:
-            fut.result()
-
-
 # src/io/loading.py
 
 def _coerce_to_zyx(arr, axes: Optional[str], pick_channel: Optional[int]):

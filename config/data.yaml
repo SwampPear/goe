@@ -5,3 +5,4 @@ urls: [
   https://dl.ash2txt.org/full-scrolls/Scroll4/PHerc1667.volpkg/,
   https://dl.ash2txt.org/full-scrolls/Scroll5/PHerc172.volpkg/
 ]
+root: data/
