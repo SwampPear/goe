@@ -1,15 +1,14 @@
 [project]
-name = "goe"
+name = "graph-of-experts"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "beautifulsoup4>=4.14.2",
-    "numpy>=2.3.3",
+    "bs4>=0.0.2",
+    "numpy>=2.3.4",
     "pyyaml>=6.0.3",
     "requests>=2.32.5",
-    "tifffile>=2025.10.4",
-    "tqdm>=4.67.1",
+    "tifffile>=2025.10.16",
     "zarr>=3.1.3",
 ]
