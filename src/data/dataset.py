@@ -19,7 +19,7 @@ def _safe_path(*args) -> str:
     """
     Safely formats a path as a string.
     Args:
-        args: str | Path
+        args: str | Path - path components
     Returns:
         formatted path
     """
@@ -42,7 +42,7 @@ def _safe_url(*args) -> str:
     """
     Safely formats a url as a string.
     Args:
-        args: str | Path
+        args: str | Path - url components
     Returns:
         formatted url
     """
@@ -55,13 +55,29 @@ def _safe_url(*args) -> str:
     return out
 
 
-def _download_file(session: requests.Session, url: str, scroll_idx: int):
-        """Downloads a single file to raw data."""
+def _ensure_dest_exists(fp: str, scroll: int) -> (str, str):
+    """
+    Ensures a destination directory exists and creates destination and temp files for downloads.
+    Args:
+        fp: str - url - filename of the destination file
+        scroll: int - id of the scroll
+    Returns:
+        destination path, temporary file path
+    """
+    dest = Path(config("data", "root"), "raw", str(scroll), fp)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.with_suffix(dest.suffix + ".part")
+
+    return dest, tmp
+
+
+def _download_file(session: requests.Session, fp: str, url: str, scroll: int):
+        """
+        Downloads a file to raw data.
+        """
 
         # make sure destination exists
-        dest = Path(config("data", "root"), "raw", str(scroll_idx), url.name)
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        tmp = dest.with_suffix(dest.suffix + ".part")
+        dest, tmp = _ensure_dest_exists(fp, scroll)
 
         # position header
         headers = {}
@@ -70,8 +86,7 @@ def _download_file(session: requests.Session, url: str, scroll_idx: int):
             headers["Range"] = f"bytes={pos}-"
         
         # download file
-        url = str(url).replace("https:/", "https://")
-        with session.get(url, stream=True, timeout=60, headers=headers) as r:
+        with session.get(_safe_url(url), stream=True, timeout=60, headers=headers) as r:
             if r.status_code not in (200, 206):
                 raise RuntimeError(f"GET {url} -> {r.status_code}")
             
@@ -85,62 +100,59 @@ def _download_file(session: requests.Session, url: str, scroll_idx: int):
         tmp.replace(dest)
 
 
-def _listdir(url: str):
-        """Lists directories parsed from autoindex style data server."""
+def _listdir(url: str) -> str:
+    """Lists directories parsed from autoindex style data server."""
+    
+    # request page
+    res = requests.get(url)
+    res.raise_for_status()
+    html = res.text
+
+    # parse paths
+    soup = BeautifulSoup(html, "html.parser")
+    paths = []
+    for tr in soup.select("#list tbody tr"):
+        a = tr.select_one("td.link a")
+        if not a:
+            continue
+        name = a.get_text(strip=True)
+        paths.append(name)
         
-        # request page
-        res = requests.get(url)
-        res.raise_for_status()
-        html = res.text
+    return paths
 
-        # parse paths
-        soup = BeautifulSoup(html, "html.parser")
-        paths = []
 
-        for tr in soup.select("#list tbody tr"):
-            a = tr.select_one("td.link a")
+def _max_date_dir(fps: List[str]) -> str:
+    # locate most recent dir
+    dirs = []
+    for i in range(len(fps)):
+        fps[i] = fps[i].rstrip("/").split("/")[-1]
 
-            if not a:
-                continue
+        # get date from path
+        try:
+            _dir = int(paths[i])
+            dirs.append(dated_dir)
+        except Exception:
+            pass
 
-            name = a.get_text(strip=True)
-            paths.append(name)
-            
-        return paths
+    return str(max(dirs))
 
-class VesuviusChallengeDatasetDownloader:
+
+class VesuviusChallengeVolumeDatasetDownloader:
     def __init__(self, scroll: int):
-        self.scroll_idx = scroll - 1
-        self.base_url = Path(config("data", "urls")[self.scroll_idx])
+        self.scroll = scroll
+        self.base_url = _safe_path(config("data", "urls")[self.scroll])
         self.files = self.list_files()
 
 
     def list_files(self) -> Dict:
-        """Lists all files under the most recently update volumes/ dir on the data server."""
+        """
+        Lists all file paths under the most recently update volumes/ dir on the data server.
+        """
+        url = _safe_url(self.base_url, "volumes")
+        fps = _listdir(url)
+        latest_dir = _safe_path(_max_date_dir(fps))
 
-        # list files in volumes/
-        url = self.base_url / Path("volumes")
-        url = str(url).replace("https:/", "https://")
-        paths = _listdir(url)
-
-        # locate most recent dir
-        dated_dirs = []
-        for i in range(len(paths)):
-            paths[i] = paths[i].rstrip("/").split("/")[-1]
-
-            # get date from path
-            try:
-                dated_dir = int(paths[i])
-                dated_dirs.append(dated_dir)
-            except Exception:
-                pass
-
-        latest_dir = Path(str(max(dated_dirs)))
-
-        # list tiff file paths
-        url = url / latest_dir
-        url = str(url).replace("https:/", "https://")
-
+        url = _safe_url(url, latest_dir)
         files = _listdir(url)
 
         return {"dir": latest_dir, "files": files}
@@ -148,7 +160,7 @@ class VesuviusChallengeDatasetDownloader:
 
     def download_files(self, start: int = 0, count: int = 4, concurrency: int = 4):
         """Concurrently downloads files from the data server."""
-        # path slice
+        # file slice
         end = min(len(self.files["files"]), start + count)
         files = self.files["files"][start:end]
 
