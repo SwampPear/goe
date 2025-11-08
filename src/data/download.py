@@ -74,7 +74,7 @@ def _listdir(url: str):
             
         return paths
 
-class VesuviusChallengeDatasetDownloader:
+class VesuviusChallengeScanDataset:
     def __init__(self, scroll: int):
         self.scroll_idx = scroll - 1
         self.base_url = Path(config("data", "urls")[self.scroll_idx])
@@ -125,7 +125,7 @@ class VesuviusChallengeDatasetDownloader:
 
         # submit jobs
         jobs = []
-        dest = Path(config("data", "root")) / Path("raw") / Path(str(self.scroll_idx + 1))
+        dest = Path(config("data", "root")) / Path("raw") / Path("scan") / Path(str(self.scroll_idx + 1))
 
         # concurrent requests
         file_dir = self.base_url / Path("volumes") / self.files["dir"]
