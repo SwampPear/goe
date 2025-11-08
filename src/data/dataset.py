@@ -11,14 +11,48 @@ from bs4 import BeautifulSoup
 import tifffile as tiff, zarr, numcodecs
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 from typing import Optional, Dict, Any, List
-
-# progress bar
-try:
-    from tqdm import tqdm
-except Exception:
-    tqdm = None
-
+from tqdm import tqdm
 from src.utils.config import config
+
+
+def _safe_path(*args) -> str:
+    """
+    Safely formats a path as a string.
+    Args:
+        args: str | Path
+    Returns:
+        formatted path
+    """
+    if len(args) < 1:
+        raise Exception("'_safe_path' must be given at least 1 argument.")
+
+    out = Path(args[0])
+    for arg in args[1:]:
+        if isinstance(arg, str):
+            out = out / Path(arg)
+        elif isinstance(arg, Path):
+            out = out / arg
+        else:
+            raise Exception("'_safe_path' must be given str or Path arguments.")
+
+    return str(out)
+
+
+def _safe_url(*args) -> str:
+    """
+    Safely formats a url as a string.
+    Args:
+        args: str | Path
+    Returns:
+        formatted url
+    """
+    if len(args) < 1:
+        raise Exception("'_safe_url' must be given at least 1 argument.")
+
+    out = _safe_path(args)
+    out = out.replace("https:/", "https://").replace("https:/", "https://")
+
+    return out
 
 
 def _download_file(session: requests.Session, url: str, scroll_idx: int):
@@ -74,7 +108,7 @@ def _listdir(url: str):
             
         return paths
 
-class VesuviusChallengeScanDataset:
+class VesuviusChallengeDatasetDownloader:
     def __init__(self, scroll: int):
         self.scroll_idx = scroll - 1
         self.base_url = Path(config("data", "urls")[self.scroll_idx])
