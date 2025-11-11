@@ -1,85 +1,34 @@
-\documentclass[12pt,a4paper]{cibb}
+\documentclass{aes2e}
 
-\usepackage{subfigure,graphicx}
-\usepackage{amsmath,amsfonts,latexsym,amssymb,euscript,xr}
-\usepackage{booktabs}
-\usepackage[nodayofweek]{datetime}
-\usepackage{hyperref}
-\usepackage{fmtcount}
-\usepackage[english]{datenumber}
-\usepackage[absolute]{textpos}
+\usepackage{amsmath}
+\usepackage{amsfonts}
 
-\usepackage[table]{xcolor}
-\usepackage{color,colortbl,tabularx}
-
-\usepackage[english]{babel}
-\usepackage[protrusion=true,expansion=true]{microtype}
-\usepackage{amsmath,amsfonts,amsthm}
-\usepackage{pifont}
-\usepackage{verbatim}
-\usepackage{mathrsfs}
-\usepackage{enumitem}
-
-\def\red{\color{red}}
-\def\black{\color{black}}
-\def\blue{\color{blue}}
-\def\magenta{\color{magenta}}
-
-\definecolor{LightBlue}{rgb}{0.88,0.9,0.9}
-
-\newcommand\blfootnote[1]{%
-  \begingroup
-  \renewcommand\thefootnote{}\footnote{#1}%
-  \addtocounter{footnote}{-1}%
-  \endgroup
-}
-
-\title{\Large $\ $\\ \bf Graph-of-Experts: Trainable Graphs for Hierarchical Multi-Scale Reasoning}
-
-\author{\large Michael Vaden$^{1, 2}$}
-\address{\footnotesize $\ $\\$^1$ Independent Researcher, Atlanta, USA
-$\ $\\$^2$ College of Computing, Georgia Institute of Technology, Atlanta, USA
-$\ $\\$^*$corresponding author: mvaden6@gatech.edu, michaelvaden.mjv@gmail.com
-}
-
-\abstract{\small Mixture of Experts, Graph Networks, Transformers \normalsize
-\\[17pt]
-{\bf Abstract.} 
-
--propose a Graph of Experts (GoE) architecture 
-
--general framework for adaptive, compositional problem-solving 
-
--each expert represents a specialized subnetwork 
-
--edges between experts are learnable pathways encoding how info should flow 
-
--gating policy learns which experts to invoke and how to traverse the expert graph 
-
--gating enables dynamic routing, feedback, and recombination of partial results 
-
--single pass -> structured reasoning 
-
--blueprint for modern hierarchical intelligence 
-
--efficient computation along graphs 
-
--could coordinate reasoning across multi-modal domains 
-
--need experiment results 
-\\
-}
 
 \begin{document}
 
+% Page heads
+\markboth{Vaden}{Graph of Experts: Trainable Graphs for Compositional Reasoning}
 
-\thispagestyle{myheadings}
-\pagestyle{myheadings}
-\markright{}
 
-\noindent \textbf{1 Introduction}
+% Title portion
+\title{Graph of Experts: Trainable Graphs for Compositional Reasoning\thanks{To whom correspondence should be addressed Tel: +1-240-381-2383; Fax: +1-202-508-3799; e-mail: info@schtm.org}}
 
--hierarchical problems require systems that adapt across levels of abstraction 
+%Author Info.
+\authorgroup{
+\author{Michael Vaden}
+\email{(mvaden6@gatech.edu)}
+\affil{Georgia Institute of Technology, Atlanta, USA}}
+
+%Abstract
+\abstract{%
+abstract}
+
+
+\maketitle
+
+%Head 1
+\section{Introduction}
+-hierarchical problems require systems that adapt across levels of abstraction
 
 -vesuvius scrolls interesting because of diversity of challenges
 
@@ -102,11 +51,9 @@ $\ $\\$^*$corresponding author: mvaden6@gatech.edu, michaelvaden.mjv@gmail.com
 -allows for self-organization into meaningful workflows  
 
 -Add experiment info
+\cite{DEK4}.
 
-\vspace{8pt}
-
-\noindent \textbf{2 Background}
-
+\section{Background and Related Work}
 -Recent progress in adaptive architectures explores dividing neural computation into specialized components  
 
 -MoE paradigm trains multiple experts in a specific data regime, while a gating network selects which to activate per input 
@@ -117,7 +64,7 @@ $\ $\\$^*$corresponding author: mvaden6@gatech.edu, michaelvaden.mjv@gmail.com
 
 -They lack explicit modeling of relationships between experts themselves, for instance, how information should transition between specialists handling distinct subproblems 
 
--Each edge encodes transition policies 
+-Each edge encodes transition policies
 
 -Gating mechanism operates not as a simple router but as a graph traversal policy 
 
@@ -126,33 +73,22 @@ $\ $\\$^*$corresponding author: mvaden6@gatech.edu, michaelvaden.mjv@gmail.com
 -Learns compositional workflows rather than isolated specializations 
 
 -Mention vesuvius relation 
-\\
 
-\noindent \textbf{3 Model}
+\section{Graph of Experts}
+In this work we introduce Graph of Experts (GoE) as a novel architecture for compositional and structured reasoning 
+across interconnected neural specialists. Unlike traditional mixture-of-experts models that operate in a single routing 
+step, GoE organizes experts as nodes within a directed graph whose edges encode learnable transition policies. Each 
+expert learns a specialized transformation, while the graph topology and routing dynamics determine how information 
+flows and recombines across experts.
 
-Here we formalize GoE as a modular pipeline. We cleanly separate input stems, modality-sepecific adapters that transform
-raw data into tokens with positions/scale, from a task-agnostic encoder that adds local/global context and emits 
-per-token content embeddings $h$ (for experts) and routing features $e$ (for the graph router). The GoE core then 
-performs sparse traversal over a library of lightweight experts under a learned graph router, allocating computation by 
-difficulty and recording path provenance. Task heads are pluggable and minimal (used only for supervision/inference), so 
-stems and heads change with the domain while the GoE core is identical. 
-\\
+\subsection{Problem}
+We consider GoE as a unified model for the coupled tasks presented by the Vesuvius Challenge of geometry unwrapping and
+ink detection.
 
-\noindent \textbf{3.1 Architecture}
-
-Here we formalize GoE as a modular pipeline. We cleanly separate input stems, modality-sepecific adapters that transform
-raw data into tokens with positions/scale, from a task-agnostic encoder that adds local/global context and emits 
-per-token content embeddings $h$ (for experts) and routing features $e$ (for the graph router). The GoE core then 
-performs sparse traversal over a library of lightweight experts under a learned graph router, allocating computation by 
-difficulty and recording path provenance. Task heads are pluggable and minimal (used only for supervision/inference), so 
-stems and heads change with the domain while the GoE core is identical. 
-\\
-
-\noindent \textbf{3.1.1 Input Stem}
-
-The input stem acts as a modality adapter for transforming data into standardized latent and tokenized representations. 
-Given an input batch, $x \in \mathbb{R}^{[B, C, \ldots]}$, with batch size $B$, channel count $C$, and remaining 
-modality-dependent dimensions, $x$ should be mapped into the latent representation
+\subsection{Input Parameterization}
+The input stem acts as a modality adapter for transforming input data into standardized latent and tokenized 
+representations. Given an input batch, $x \in \mathbb{R}^{[B, C, \ldots]}$, with batch size $B$, channel count $C$, and 
+remaining modality-dependent dimensions, $x$ should be mapped into the latent representation
 \begin{equation}
   \begin{aligned}
     f_0 = \phi(x; \theta_s)
@@ -184,24 +120,19 @@ anisotropy patterns. In contrast, for sequential or linguistic data, it could ta
 temporal pooling mechanism that encodes syntactic or positional dependencies.
 \\
 
-\noindent \textbf{3.1.2 Modality-Agnostic Encoder}
-
+\subsection{Encoder}
 Given input stem output $(T, a)$, the encoder operates on the token set $T = \{t_1, \ldots, t_N\}$ and their associated 
 auxiliary routing features $a = \{a_1, \ldots, a_N\}$. The encoder learns contextual dependencies among tokens while 
 maintaining domain invariance, enabling shared reasoning across heterogeneous modalities. Formally, the encoder applies 
 a sequence of permutation-invariant transformations
+
 \begin{equation}
   \begin{aligned}
     T' = \Phi(T; \theta_e)
   \end{aligned}
 \end{equation}
-where $\Phi$ denotes a stack of self-attention and feed-forward blocks of the form
-\begin{equation}
-  \begin{aligned}
-    \text{LayerNorm} \rightarrow \text{MultiHeadAttention}(Q,K,V) \rightarrow \text{Residual} 
-    \rightarrow \text{FeedForward} \rightarrow \text{Residual}
-  \end{aligned}
-\end{equation}
+where $\Phi$ denotes a stack of self-attention and feed-forward blocks of the form $\text{LayerNorm} \rightarrow \text{MultiHeadAttention}(Q,K,V) \rightarrow \text{Residual} \rightarrow \text{FeedForward} \rightarrow \text{Residual}$
+
 Each attention head computes
 \begin{equation}
   \begin{aligned}
@@ -226,7 +157,7 @@ routing dependencies in a manner invariant to the input modality. The resulting 
 unified, enriched representation for subsequent graph routing and expert specialization.
 \\
 
-\noindent \textbf{3.1.3 Graph Router}
+\subsection{Graph Router}
 
 The graph router defines a directed graph
 \begin{equation}
@@ -263,7 +194,7 @@ This formulation allows computation to be selective, structured, and interpretab
 relational system, and data tokens dynamically navigate it based on both semantic content and contextual metadata.
 \\
 
-\noindent \textbf{3.1.4 Experts}
+\subsection{Experts}
 
 Each node $v_m \in \mathcal{V}$ of the expert graph represents a specialized processing unit trained to perform a 
 distinct transformation on routed token representations. Collectively, these experts form a distributed reasoning system 
@@ -311,8 +242,6 @@ connected experts).
 
 TODO Token recombination
 
-\noindent \textbf{3.1.5 Recursive Expert Refinement} 
-
 To enable progressive reasoning and self-correction, the architecture employs a recursive refinement mechanism in which 
 expert activations are iteratively updated based on their own outputs and feedback from neighboring experts. Rather than 
 processing each token once, the system performs multiple refinement cycles
@@ -355,24 +284,81 @@ expert graph, allowing specialists to exchange context and correct earlier appro
 smoother, more consistent outputs while maintaining computational efficiency through early stopping.
 \\
 
-\noindent \textbf{3.6 Decoder / Output Head}
+\subsection{Decoders}
 
-\noindent \textbf{3.7 Training}
+\section{SUMMARY}
+Filtering an audio signal with an allpass filter does not usually have a major effect on the signal's timbre. The allpass filter does not change the frequency content of the signal, but only introduces a phase shift or delay. Audibility of the phase distortion caused by an allpass filter in a sound reproduction system has been a topic of many studies, see, e.g., \cite{DEK1}, \cite{DEK2}. In this paper, we investigate audio effects processing using high-order allpass filters that consist of many cascaded low-order allpass filters. These filters have long chirp-like impulse responses. When audio and music signals are processed with such a filter, remarkable changes are obtained that are similar to the spectral delay effect  \cite{DEK3}, \cite{DEK4}.
 
-\begin{comment}
-\section*{Conflict of interests}
-The authors should declare here any potential conflicts of interests.
+\section{CONCLUSION}
+Filtering an audio signal with an allpass filter does not usually have a major effect on the signal's timbre. The allpass filter does not change the frequency content of the signal, but only introduces a phase shift or delay. Audibility of the phase distortion caused by an allpass filter in a sound reproduction system has been a topic of many studies, see, e.g., \cite{DEK1}, \cite{DEK2}. In this paper, we investigate audio effects processing using high-order allpass filters that consist of many cascaded low-order allpass filters. These filters have long chirp-like impulse responses. When audio and music signals are processed with such a filter, remarkable changes are obtained that are similar to the spectral delay effect  \cite{DEK3}, \cite{DEK4}. Note that articles might have a digital object identifier~\cite{DEK5}.
 
-\section*{Acknowledgments (optional)}
-The authors would like to thank XXX and YYY for their helpful feedback.
+\section{ACKNOWLEDGMENT}
+This research was conducted in fall 2008 when Vesa V\"alim\"aki was a visiting scholar at CCRMA, Stanford University. His visit was financed by the Academy of Finland (project no. 126310). The authors would like to Dr. Henri Penttinen for his comments and for the snare drum sample used in this work.
 
-\section*{Funding (optional)}
-This work was supported by the XXX agency (grant number: XXX).
+\bibliography{aes2e.bib}
+\bibliographystyle{aes2e.bst}
 
-\section*{Availability of data and software code (optional and strongly suggested)}
-Our software code is available at the following URL: XXX.
-\newline
-\indent Our dataset is available at the following URL: XXX.
-\end{comment}
+% NOTE:
+% - in case you are not using bibTex you have to manually edit the bibliograpy as below.
+% - if submitting a bibTex file is not allowed you can copy the content from the aes2e.bbl file  
+%\begin{thebibliography}{99}
+%
+%\newcommand{\enquote}[1]{``#1''}
+%\providecommand{\url}[1]{\texttt{#1}}
+%\providecommand{\urlprefix}{URL }
+%\expandafter\ifx\csname urlstyle\endcsname\relax
+%  \providecommand{\doi}[1]{[Online]. Available: \discretionary{}{}{}#1}\else
+%  \providecommand{\doi}{doi:\discretionary{}{}{}\begingroup
+%  \urlstyle{rm}\Url}\fi
+%
+%\bibitem{DEK1}
+%D.~Preis, \enquote{Phase Distortion and Phase Equalization in Audio Signal
+%  Processing---A Tutorial Review,} \emph{J. Audio Eng. Soc.}, vol.~30, no.~11,
+%  pp. 774--779 (1982 Nov.).
+%
+%\bibitem{DEK2}
+%J.~S. Abel, D.~P. Berners, \enquote{MUS424/EE367D: Signal Processing Techniques
+%  for Digital Audio Effects,}  (2005), unpublished Course Notes, CCRMA,
+%  Stanford University, Stanford, CA.
+%
+%\bibitem{DEK3}
+%C.~Roads, \enquote{Musical Sound Transformation by Convolution,} presented at
+%  the \emph{Int. Computer Music Conf.}, pp. 102--109 (1993).
+%
+%\bibitem{DEK4}
+%C.~Roads, \emph{The Computer Music Tutorial} (MIT Press, Cambridge, MA), 1st
+%  ed. (1996).
+%
+%\bibitem{DEK5}
+%H.~Morgenstern, B.~Rafaely, \enquote{Spatial Reverberation and Dereverberation
+%  Using an Acoustic Multiple-Input Multiple-Output System,} \emph{J. Audio Eng.
+%  Soc}, vol.~65, no. 1/2, pp. 42--55 (2017 Jan.Feb.),
+%  \doi{https://doi.org/10.17743/jaes.2016.0063}.
+%  
+%\end{thebibliography}
 
+%Appendix
+\appendix
+\section*{APPENDIX}
+Filtering an audio signal with an allpass filter does not usually have a major effect on the signal's timbre. The allpass filter does not change the frequency content of the signal, but only introduces a phase shift or delay. Audibility of the phase distortion caused by an allpass filter in a sound reproduction system has been a topic of many studies, see, e.g., \cite{DEK1}, \cite{DEK2}.
+\begin{equation}
+\phi (\omega ) =  - \omega  + 2\arctan \left( {\frac{{a_1 \sin \omega }}{{1 + a_1 \cos \omega }}} \right)
+\end{equation}
+
+In this paper, we investigate audio effects processing using high-order allpass filters that consist of many cascaded low-order allpass filters. These filters have long chirp-like impulse responses. When audio and music signals are processed with such a filter, remarkable changes are obtained that are similar to the spectral delay effect  \cite{DEK3}, \cite{DEK4}.
+
+
+\begin{nomenclature}[PAMPs]
+\subsection*{NOMENCLATURE}
+\nomentry{a$_c$}{condensation coefficient condensation coefficient condensation coefficient}
+
+
+\nomentry{TLR}{Toll-like receptor}
+
+\nomentry{PAMPs}{pathogen-associated molecular patterns condensation coefficient condensation}
+\end{nomenclature}
+
+%Biography
+ \biography{A1firstname A1lastname}{a.eps}{A1firstname A1lastname is professor of audio signal processing at Helsinki University of Technology (TKK), Espoo, Finland. He received his Master of Science in Technology, Licentiate of Science in Technology, and Doctor of Science in Technology degrees in electrical engineering from TKK in 1992, 1994, and 1995, respectively. His doctoral dissertation dealt with fractional delay filters and physical modeling of musical wind instruments. Since 1990, he has worked mostly at TKK with the exception of a few periods. In 1996 he spent six months as a postdoctoral research fellow at the University of Westminster, London, UK. In 2001-2002 he was professor of signal processing at the Pori School of Technology and Economics, Tampere University of Technology, Pori, Finland. During the academic year 2008-2009 he has been on sabbatical and has spent several months as a visiting scholar at the Center for Computer Research in Music and Acoustics (CCRMA), Stanford University, Stanford, CA. His research interests include musical signal processing, digital filter design, and acoustics of musical instruments. Prof. V\"alim\"aki is a senior member of the IEEE Signal Processing Society and is a member of the AES, the Acoustical Society of Finland, and the Finnish Musicological Society. He was the chairman of the 11th International Conference on Digital Audio Effects (DAFx-08), which was held in Espoo, Finland, in 2008.}
+ \biography{A2firstname A2lastname}{b.eps}{A2firstname A2lastname is a consulting professor at the Center for Computer Research in Music and Acoustics (CCRMA) in the Music Department at Stanford University where his research interests include audio and music applications of signal and array processing, parameter estimation, and acoustics. From 1999 to 2007, Abel was a co-founder and chief technology officer of the Grammy Award-winning Universal Audio, Inc. He was a researcher at NASA/Ames Research Center, exploring topics in room acoustics and spatial hearing on a grant through the San Jose State University Foundation. Abel was also chief scientist of Crystal River Engineering, Inc., where he developed their positional audio technology, and a lecturer in the Department of Electrical Engineering at Yale University. As an industry consultant, Abel has worked with Apple, FDNY, LSI Logic, NRL, SAIC and Sennheiser, on projects in professional audio, GPS, medical imaging, passive sonar and fire department resource allocation. He holds Ph.D. and M.S. degrees from Stanford University, and an S.B. from MIT, all in electrical engineering. Abel is a Fellow of the Audio Engineering Society.}
 \end{document}

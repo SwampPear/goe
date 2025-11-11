@@ -1,193 +1,152 @@
 from __future__ import annotations
-import os
-import sys
-import time
-import math
-import hashlib
+import os, sys, time, math, hashlib
 import requests
 import numpy as np
 from pathlib import Path
 from bs4 import BeautifulSoup
-import tifffile as tiff, zarr, numcodecs
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
+from urllib.parse import urljoin
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional, Dict, Any, List
 from tqdm import tqdm
 from src.utils.config import config
 
 
-def _safe_path(*args) -> str:
-    """
-    Safely formats a path as a string.
-    Args:
-        args: str | Path - path components
-    Returns:
-        formatted path
-    """
-    if len(args) < 1:
-        raise Exception("'_safe_path' must be given at least 1 argument.")
-
-    out = Path(args[0])
-    for arg in args[1:]:
-        if isinstance(arg, str):
-            out = out / Path(arg)
-        elif isinstance(arg, Path):
-            out = out / arg
+def _safe_path(*parts: str | Path) -> str:
+    if not parts:
+        raise ValueError("'_safe_path' needs at least one argument")
+    p = Path()
+    for part in parts:
+        if isinstance(part, (str, Path)):
+            p = p / Path(part)
         else:
-            raise Exception("'_safe_path' must be given str or Path arguments.")
+            raise TypeError("path parts must be str or Path")
+    return str(p)
 
-    return str(out)
 
-
-def _safe_url(*args) -> str:
+def _safe_url(*parts: str) -> str:
     """
-    Safely formats a url as a string.
-    Args:
-        args: str | Path - url components
-    Returns:
-        formatted url
+    Join URL parts without mangling the scheme or inserting per-character slashes.
     """
-    if len(args) < 1:
-        raise Exception("'_safe_url' must be given at least 1 argument.")
+    if not parts:
+        raise ValueError("'_safe_url' needs at least one argument")
+    base = parts[0]
+    # ensure base ends with '/', so urljoin appends instead of replacing
+    if not base.endswith('/'):
+        base += '/'
+    out = base
+    for seg in parts[1:]:
+        seg = seg.lstrip('/')  # avoid resetting path
+        out = urljoin(out, seg + ('/' if seg and not seg.endswith('/') else ''))
+    # drop the trailing slash we added unless caller intended it
+    return out[:-1] if out.endswith('/') else out
 
-    out = _safe_path(args)
-    out = out.replace("https:/", "https://").replace("https:/", "https://")
 
-    return out
-
-
-def _ensure_dest_exists(fp: str, scroll: int) -> (str, str):
-    """
-    Ensures a destination directory exists and creates destination and temp files for downloads.
-    Args:
-        fp: str - url - filename of the destination file
-        scroll: int - id of the scroll
-    Returns:
-        destination path, temporary file path
-    """
-    dest = Path(config("data", "root"), "raw", str(scroll), fp)
+def _ensure_dest_exists(dest: Path) -> tuple[Path, Path]:
     dest.parent.mkdir(parents=True, exist_ok=True)
     tmp = dest.with_suffix(dest.suffix + ".part")
-
     return dest, tmp
 
 
-def _download_file(session: requests.Session, fp: str, url: str, scroll: int):
-        """
-        Downloads a file to raw data.
-        """
+def _download_file(session: requests.Session, dest: str, url: str):
+    dest, tmp = _ensure_dest_exists(dest)
 
-        # make sure destination exists
-        dest, tmp = _ensure_dest_exists(fp, scroll)
+    headers = {}
+    pos = tmp.stat().st_size if tmp.exists() else 0
+    if pos > 0:
+        headers["Range"] = f"bytes={pos}-"
 
-        # position header
-        headers = {}
-        pos = tmp.stat().st_size if tmp.exists() else 0
-        if pos > 0:
-            headers["Range"] = f"bytes={pos}-"
-        
-        # download file
-        with session.get(_safe_url(url), stream=True, timeout=60, headers=headers) as r:
-            if r.status_code not in (200, 206):
-                raise RuntimeError(f"GET {url} -> {r.status_code}")
+    with session.get(url, stream=True, timeout=60, headers=headers) as r:
+        if r.status_code not in (200, 206):
+            raise RuntimeError(f"GET {url} -> {r.status_code}")
+        with open(tmp, "ab" if pos > 0 else "wb") as f:
+            for chunk in r.iter_content(chunk_size=1 << 20):
+                if chunk:
+                    f.write(chunk)
+
+    tmp.replace(dest)
+
+
+def _download_files(files: List[str], dest_dir: str, base_url: str,
+                    scroll: int, start: int, count: int, concurrency: int):
+    end = min(len(files), start + count)
+    files = files[start:end]
+
+    sess = requests.Session()
+    adapter = requests.adapters.HTTPAdapter(
+        pool_connections=concurrency, pool_maxsize=concurrency, max_retries=2
+    )
+    sess.mount("http://", adapter)
+    sess.mount("https://", adapter)
+
+    jobs = []
+    dest_dir_p = Path(dest_dir)
+
+    with ThreadPoolExecutor(max_workers=concurrency) as ex:
+        for fname in files:
+            out_path = dest_dir_p / fname
+            if out_path.exists():
+                continue
+            file_url = _safe_url(base_url, fname)
             
-            # write chunk
-            with open(tmp, "ab" if pos > 0 else "wb") as f:
-                for chunk_bytes in r.iter_content(chunk_size=1<<20):
-                    if chunk_bytes:
-                        f.write(chunk_bytes)
+            jobs.append(ex.submit(_download_file, sess, out_path, file_url))
 
-        # atomic move
-        tmp.replace(dest)
+        it = tqdm(as_completed(jobs), total=len(jobs), desc="Downloading", unit="file")
+        for fut in it:
+            fut.result()
 
 
-def _listdir(url: str) -> str:
-    """Lists directories parsed from autoindex style data server."""
-    
-    # request page
-    res = requests.get(url)
+def _listdir(url: str) -> List[str]:
+    res = requests.get(url, timeout=30)
     res.raise_for_status()
-    html = res.text
-
-    # parse paths
-    soup = BeautifulSoup(html, "html.parser")
+    soup = BeautifulSoup(res.text, "html.parser")
     paths = []
-    for tr in soup.select("#list tbody tr"):
-        a = tr.select_one("td.link a")
-        if not a:
-            continue
+    # Nginx autoindex variants: try common selectors, then fallback
+    anchors = soup.select("#list tbody tr td.link a") or soup.select("pre a") or soup.select("a")
+    for a in anchors:
         name = a.get_text(strip=True)
+        if not name or name in (".", ".."):
+            continue
         paths.append(name)
-        
     return paths
 
 
 def _max_date_dir(fps: List[str]) -> str:
-    # locate most recent dir
-    dirs = []
-    for i in range(len(fps)):
-        fps[i] = fps[i].rstrip("/").split("/")[-1]
-
-        # get date from path
+    # strip trailing slashes like '20230206171837/'
+    candidates = []
+    for s in fps:
+        s = s.rstrip("/")
         try:
-            _dir = int(paths[i])
-            dirs.append(dated_dir)
-        except Exception:
+            candidates.append(int(s))
+        except ValueError:
             pass
-
-    return str(max(dirs))
+    if not candidates:
+        raise RuntimeError("No dated directories found")
+    return str(max(candidates))
 
 
 class VesuviusChallengeVolumeDatasetDownloader:
     def __init__(self, scroll: int):
         self.scroll = scroll
-        self.base_url = _safe_path(config("data", "urls")[self.scroll])
+        self.base_url = _safe_url(config("data", "urls")[self.scroll])
         self.files = self.list_files()
 
-
-    def list_files(self) -> Dict:
+    def list_files(self) -> Dict[str, Any]:
         """
-        Lists all file paths under the most recently update volumes/ dir on the data server.
+        List files under the most recent 'volumes/' dir.
         """
-        url = _safe_url(self.base_url, "volumes")
-        fps = _listdir(url)
-        latest_dir = _safe_path(_max_date_dir(fps))
+        volumes_url = _safe_url(self.base_url, "volumes")
+        date_dirs = _listdir(volumes_url)
+        latest_dir = _max_date_dir(date_dirs)
 
-        url = _safe_url(url, latest_dir)
-        files = _listdir(url)
+        latest_url = _safe_url(volumes_url, latest_dir)
+        files = _listdir(latest_url)
 
+        # normalize file names (strip trailing '/')
+        files = [f.rstrip("/") for f in files if f and not f.endswith("/")]
         return {"dir": latest_dir, "files": files}
 
 
-    def download_files(self, start: int = 0, count: int = 4, concurrency: int = 4):
-        """Concurrently downloads files from the data server."""
-        # file slice
-        end = min(len(self.files["files"]), start + count)
-        files = self.files["files"][start:end]
-
-        # http adapteer (keep-alive pool)
-        sess = requests.Session()
-        adapter = requests.adapters.HTTPAdapter(pool_connections=concurrency, pool_maxsize=concurrency, max_retries=2)
-        sess.mount("http://", adapter); sess.mount("https://", adapter)
-
-        # submit jobs
-        jobs = []
-        dest = Path(config("data", "root")) / Path("raw") / Path("scan") / Path(str(self.scroll_idx + 1))
-
-        # concurrent requests
-        file_dir = self.base_url / Path("volumes") / self.files["dir"]
-        with ThreadPoolExecutor(max_workers=concurrency) as ex:
-            for file in files:
-                out_path = dest / Path(file)
-                if out_path.exists():
-                    continue
-
-                # submit job
-                url = file_dir / Path(file)
-                jobs.append(ex.submit(_download_file, sess, url, self.scroll_idx))
-
-            it = as_completed(jobs)
-
-            # progress bar
-            it = tqdm(it, total=len(jobs), desc="Downloading", unit="file")
-            for fut in it:
-                fut.result()
+    def download_files(self, start: int = 0, count: int = 1, concurrency: int = 4):
+        dest = _safe_path(config("data", "root"), "raw", "volumes", str(self.scroll))
+        base = _safe_url(self.base_url, "volumes", self.files["dir"])
+        _download_files(self.files["files"], dest, base, self.scroll, start, count, concurrency)
