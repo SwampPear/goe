@@ -6,7 +6,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import argparse
 from urllib.parse import urljoin
 from src.utils.config import config
-from src.data.dataset import VesuviusChallengeVolumeDatasetDownloader
+from src.data.downloader import VesuviusChallengeVolumeDatasetDownloader
 
 def main():
     ap = argparse.ArgumentParser(description="Downloads data from the Vesuvius Challenge data server.")

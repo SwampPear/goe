@@ -1,8 +1,16 @@
-urls: [
+scroll_urls: [
   https://dl.ash2txt.org/full-scrolls/Scroll1/PHercParis4.volpkg/,
   https://dl.ash2txt.org/full-scrolls/Scroll2/PHercParis3.volpkg/,
   https://dl.ash2txt.org/full-scrolls/Scroll3/PHerc332.volpkg/,
   https://dl.ash2txt.org/full-scrolls/Scroll4/PHerc1667.volpkg/,
   https://dl.ash2txt.org/full-scrolls/Scroll5/PHerc172.volpkg/
+]
+fragment_urls: [
+  https://dl.ash2txt.org/fragments/Frag1/PHercParis2Fr47.volpkg/
+  https://dl.ash2txt.org/fragments/Frag2/PHercParis2Fr143.volpkg/
+  https://dl.ash2txt.org/fragments/Frag3/PHercParis1Fr34.volpkg/
+  https://dl.ash2txt.org/fragments/Frag4/PHercParis1Fr39.volpkg/
+  https://dl.ash2txt.org/fragments/Frag5/PHerc1667Cr1Fr3.volpkg/
+  https://dl.ash2txt.org/fragments/Frag6/PHerc51Cr4Fr8.volpkg/
 ]
 root: data/

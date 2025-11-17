@@ -66,8 +66,7 @@ def _download_file(session: requests.Session, dest: str, url: str):
     tmp.replace(dest)
 
 
-def _download_files(files: List[str], dest_dir: str, base_url: str,
-                    scroll: int, start: int, count: int, concurrency: int):
+def _download_files(files: List[str], dest_dir: str, base_url: str, start: int, count: int, concurrency: int):
     end = min(len(files), start + count)
     files = files[start:end]
 
@@ -127,7 +126,7 @@ def _max_date_dir(fps: List[str]) -> str:
 class VesuviusChallengeVolumeDatasetDownloader:
     def __init__(self, scroll: int):
         self.scroll = scroll
-        self.base_url = _safe_url(config("data", "urls")[self.scroll])
+        self.base_url = _safe_url(config("data", "scroll_urls")[self.scroll])
         self.files = self.list_files()
 
     def list_files(self) -> Dict[str, Any]:
@@ -141,7 +140,6 @@ class VesuviusChallengeVolumeDatasetDownloader:
         latest_url = _safe_url(volumes_url, latest_dir)
         files = _listdir(latest_url)
 
-        # normalize file names (strip trailing '/')
         files = [f.rstrip("/") for f in files if f and not f.endswith("/")]
         return {"dir": latest_dir, "files": files}
 
@@ -149,4 +147,26 @@ class VesuviusChallengeVolumeDatasetDownloader:
     def download_files(self, start: int = 0, count: int = 1, concurrency: int = 4):
         dest = _safe_path(config("data", "root"), "raw", "volumes", str(self.scroll))
         base = _safe_url(self.base_url, "volumes", self.files["dir"])
-        _download_files(self.files["files"], dest, base, self.scroll, start, count, concurrency)
+        _download_files(self.files["files"], dest, base, start, count, concurrency)
+
+
+class VesuviusChallengeFragmentDatasetDownloader:
+    def __init__(self, scroll: int):
+        pass
+
+    def list_files(self) -> Dict[str, Any]:
+        pass
+
+    def download_files(self, start: int = 0, count: int = 1, concurrency: int = 4):
+        pass
+
+
+class VesuviusChallengeSegmentDatasetDownloader:
+    def __init__(self, scroll: int):
+        pass
+
+    def list_files(self) -> Dict[str, Any]:
+        pass
+
+    def download_files(self, start: int = 0, count: int = 1, concurrency: int = 4):
+        pass
