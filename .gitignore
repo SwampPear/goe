@@ -4,6 +4,7 @@ __pycache__/
 data/processed/
 data/raw/
 ref/
+dir.txt
 
 # latex processing
 paper.aux
@@ -14,3 +15,4 @@ paper.fls
 paper.log
 paper.out
 paper.synctex.gz
+

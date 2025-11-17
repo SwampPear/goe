@@ -12,6 +12,13 @@ from src.utils.config import config
 
 
 def _safe_path(*parts: str | Path) -> str:
+    """
+    Join path file path parts together
+    Args:
+        parts: *(str | Path) - argument list for path parts
+    Returns:
+        the formatted path
+    """
     if not parts:
         raise ValueError("'_safe_path' needs at least one argument")
     p = Path()
@@ -26,6 +33,10 @@ def _safe_path(*parts: str | Path) -> str:
 def _safe_url(*parts: str) -> str:
     """
     Join URL parts without mangling the scheme or inserting per-character slashes.
+    Args:
+        parts: *str - argument list for url parts
+    Returns:
+        the formatted url
     """
     if not parts:
         raise ValueError("'_safe_url' needs at least one argument")
@@ -42,12 +53,27 @@ def _safe_url(*parts: str) -> str:
 
 
 def _ensure_dest_exists(dest: Path) -> tuple[Path, Path]:
+    """
+    Ensures a destination file exists and creates it if not.
+    Args:
+        dest: Path - the destination file
+    Returns:
+        destination file, temporary destination (for download)
+    """
     dest.parent.mkdir(parents=True, exist_ok=True)
     tmp = dest.with_suffix(dest.suffix + ".part")
+
     return dest, tmp
 
 
 def _download_file(session: requests.Session, dest: str, url: str):
+    """
+    Downloads a single file.
+    Args:
+        session: requests.Session - http session
+        dest: str - destination file path
+        url: str - download url
+    """
     dest, tmp = _ensure_dest_exists(dest)
 
     headers = {}
@@ -67,6 +93,16 @@ def _download_file(session: requests.Session, dest: str, url: str):
 
 
 def _download_files(files: List[str], dest_dir: str, base_url: str, start: int, count: int, concurrency: int):
+    """
+    Downloads a sequence of files.
+    Args:
+        files: str[] - file paths to download
+        dest_dir: str - destination directory
+        base_url: str - base url of download
+        start: int - start index of files
+        count: int - number of files to download
+        concurrency: int - number of concurrent workers to use
+    """
     end = min(len(files), start + count)
     files = files[start:end]
 
@@ -95,6 +131,13 @@ def _download_files(files: List[str], dest_dir: str, base_url: str, start: int, 
 
 
 def _listdir(url: str) -> List[str]:
+    """
+    Lists all files from an autoindex style web directory.
+    Args:
+        url: str - url to parse
+    Returns:
+        list of files
+    """
     res = requests.get(url, timeout=30)
     res.raise_for_status()
     soup = BeautifulSoup(res.text, "html.parser")
@@ -110,6 +153,14 @@ def _listdir(url: str) -> List[str]:
 
 
 def _max_date_dir(fps: List[str]) -> str:
+    """
+    Gets the max dated directory from a list of dated directories.
+    Args:
+        fps: str[] - file paths
+    Returns:
+        max dated directory
+    """
+
     # strip trailing slashes like '20230206171837/'
     candidates = []
     for s in fps:
