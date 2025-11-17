@@ -46,10 +46,10 @@ class GraphOfExpertsConfig:
 
 class GraphOfExperts(nn.Module):
     """
-    Full Graph-of-Experts model.
+    Graph-of-Experts model.
 
     Pipeline:
-        x (volume) → Stem:
+        x (volumetric input) -> Stem:
             T_0, a_0, meta      = stem(x)
 
         → Encoder:
