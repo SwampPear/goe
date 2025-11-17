@@ -1,4 +1,3 @@
-# stem.py
 import math
 from dataclasses import dataclass
 from typing import Tuple, Dict, Optional
@@ -13,23 +12,14 @@ class InputStemConfig:
     """
     Configuration for the InputStem.
 
-    Attributes
-    ----------
-    in_channels:
-        Number of input channels in the tomographic volume (C_in).
-    stem_channels:
-        Number of feature channels produced by the 3D encoder φ(x; θ_s).
-    token_dim:
-        Dimensionality of token embeddings t_i.
-    aux_dim:
-        Dimensionality of auxiliary routing features a_i.
-    patch_size:
-        Size of each 3D patch (kD, kH, kW) in voxels.
-    patch_stride:
-        Stride between consecutive patches (sD, sH, sW). Can be smaller than
-        patch_size to allow overlapping patches.
-    use_layer_norm:
-        Whether to apply LayerNorm to token embeddings.
+    Attributes:
+        in_channels: # of input channels in the tomographic volume (C_in)
+        stem_channels: # of feature channels produced by the 3D encoder psi(x; theta_s)
+        token_dim: dimensionality of token embeddings t_i
+        aux_dim: dimensionality of auxiliary routing features a_i
+        patch_size: size of each 3D patch (kD, kH, kW) in voxels
+        patch_stride: stride between consecutive patches (sD, sH, sW)
+        use_layer_norm: whether to apply LayerNorm to token embeddings
     """
     in_channels: int = 1
     stem_channels: int = 32
@@ -42,7 +32,7 @@ class InputStemConfig:
 
 class Conv3DEncoder(nn.Module):
     """
-    Lightweight 3D convolutional encoder φ(x; θ_s).
+    Lightweight 3D convolutional encoder psi(x; theta_s).
 
     This module extracts localized features such as carbonization gradients,
     fiber structure, and ink-related density anomalies from the raw volume.
@@ -51,8 +41,6 @@ class Conv3DEncoder(nn.Module):
     def __init__(self, in_channels: int, stem_channels: int):
         super().__init__()
 
-        # A simple but expressive 3D CNN: two conv blocks with downsampling.
-        # You can swap this for a deeper encoder (ResNet, UNet, etc.) if needed.
         mid = stem_channels // 2
 
         self.encoder = nn.Sequential(
@@ -64,48 +52,44 @@ class Conv3DEncoder(nn.Module):
             nn.BatchNorm3d(mid),
             nn.ReLU(inplace=True),
 
-            # Optional downsampling to aggregate local context.
+            # downsampling
             nn.Conv3d(mid, stem_channels, kernel_size=3, stride=2, padding=1, bias=False),
             nn.BatchNorm3d(stem_channels),
-            nn.ReLU(inplace=True),
+            nn.ReLU(inplace=True)
         )
 
     def forward(self, x: Tensor) -> Tensor:
         """
-        Parameters
-        ----------
-        x:
-            Input volume of shape [B, C_in, D, H, W].
+        Forward pass.
 
-        Returns
-        -------
-        f0:
-            Feature volume of shape [B, C_stem, D', H', W'].
+        Args:
+            x: Tensor - input volume of shape [B, C_in, D, H, W]
+        Returns:
+            feature volume of shape [B, C_stem, D', H', W']
         """
         return self.encoder(x)
 
 
 def _compute_output_grid(
-    D: int,
-    H: int,
-    W: int,
-    patch_size: Tuple[int, int, int],
-    stride: Tuple[int, int, int],
-) -> Tuple[int, int, int]:
+    D: int, H: int, W: int, 
+    patch_size: Tuple[int, int, int], 
+    stride: Tuple[int, int, int]
+    ) -> Tuple[int, int, int]:
     kD, kH, kW = patch_size
     sD, sH, sW = stride
 
     out_D = math.floor((D - kD) / sD) + 1
     out_H = math.floor((H - kH) / sH) + 1
     out_W = math.floor((W - kW) / sW) + 1
+
     return out_D, out_H, out_W
 
 
 def extract_patches_3d(
     features: Tensor,
-    patch_size: Tuple[int, int, int],
-    stride: Tuple[int, int, int],
-) -> Tuple[Tensor, Tensor]:
+    patch_size: Tuple[int, int, int], 
+    stride: Tuple[int, int, int]
+    ) -> Tuple[Tensor, Tensor]:
     """
     Extract overlapping 3D patches from a feature volume.
 
