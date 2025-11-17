@@ -1,5 +1,5 @@
 """
-Lightweight YAML-based configuration loader for the project.
+Lightweight YAML-based configuration loader.
 
 This module provides a simple interface for retrieving configuration values stored under `config/<name>.yaml`.
 
