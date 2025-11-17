@@ -1,3 +1,27 @@
+"""
+Dataset downloaders for the Vesuvius Challenge data server.
+
+This module provides safe path/URL helpers, HTML directory parsing, and concurrent HTTP downloading for the Vesuvius 
+Challenge datasets (volumes, fragments, segments). Directory listings are parsed from typical autoindex-style HTTP 
+directory pages (e.g., Nginx autoindex).
+
+Downloaders:
+    - VesuviusChallengeVolumeDatasetDownloader:
+        Finds the newest `volumes/<date>/` directory and downloads its constituent files.
+    - VesuviusChallengeFragmentDatasetDownloader:
+         Placeholder for fragment-level datasets.
+    - VesuviusChallengeSegmentDatasetDownloader:
+         Placeholder for segment-level datasets.
+
+Configuration is sourced via `src.utils.config.config`, which must
+provide:
+    config("data", "root")        -> base download directory
+    config("data", "scroll_urls") -> mapping of scroll_id → base URL
+
+This module is designed for use in offline dataset preparation and training pipelines that require local copies of 
+the Vesuvius Challenge data.
+"""
+
 from __future__ import annotations
 import os, sys, time, math, hashlib
 import requests
@@ -13,7 +37,7 @@ from src.utils.config import config
 
 def _safe_path(*parts: str | Path) -> str:
     """
-    Join path file path parts together
+    Join path file path parts together.
     Args:
         parts: *(str | Path) - argument list for path parts
     Returns:
@@ -152,18 +176,16 @@ def _listdir(url: str) -> List[str]:
     return paths
 
 
-def _max_date_dir(fps: List[str]) -> str:
+def _max_date_dir(paths: List[str]) -> str:
     """
     Gets the max dated directory from a list of dated directories.
     Args:
-        fps: str[] - file paths
+        paths: str[] - file paths
     Returns:
         max dated directory
     """
-
-    # strip trailing slashes like '20230206171837/'
     candidates = []
-    for s in fps:
+    for s in paths:
         s = s.rstrip("/")
         try:
             candidates.append(int(s))
@@ -183,6 +205,11 @@ class VesuviusChallengeVolumeDatasetDownloader:
     def list_files(self) -> Dict[str, Any]:
         """
         List files under the most recent 'volumes/' dir.
+        Returns:
+            {
+                'dir': file directory
+                'files': file paths
+            }
         """
         volumes_url = _safe_url(self.base_url, "volumes")
         date_dirs = _listdir(volumes_url)
@@ -196,6 +223,13 @@ class VesuviusChallengeVolumeDatasetDownloader:
 
 
     def download_files(self, start: int = 0, count: int = 1, concurrency: int = 4):
+        """
+        Downloads files from data server's 'volumes/' dir.
+        Args:
+            start: int - start index of files
+            count: int - number of files to download
+            concurrency: int - number of concurrent workers to use
+        """
         dest = _safe_path(config("data", "root"), "raw", "volumes", str(self.scroll))
         base = _safe_url(self.base_url, "volumes", self.files["dir"])
         _download_files(self.files["files"], dest, base, start, count, concurrency)
