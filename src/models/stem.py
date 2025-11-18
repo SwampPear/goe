@@ -172,7 +172,7 @@ class InputStem(nn.Module):
 
         # projections
         self.token_proj: Optional[nn.Linear] = None # from flattened patch features to token embeddings
-        self.aux_proj: Optional[nn.Linear] = None.  # from flattened patch features to auxiliary routing features
+        self.aux_proj: Optional[nn.Linear] = None   # from flattened patch features to auxiliary routing features
 
         # LayerNorm over token_dim for stability.
         self.token_norm = nn.LayerNorm(cfg.token_dim) if cfg.use_layer_norm else nn.Identity()
