@@ -1,0 +1,31 @@
+.
+├── scripts
+│   ├── __init__.py
+│   ├── download_data.py
+│   ├── eval.py
+│   └── train.py
+├── src
+│   ├── __init__.py
+│   ├── data
+│   │   ├── __init__.py
+│   │   ├── augmentations.py
+│   │   ├── download.py
+│   │   ├── losses.py
+│   │   └── patches.py
+│   ├── models
+│   │   ├── __init__.py
+│   │   ├── decoder.py
+│   │   ├── encoder.py
+│   │   ├── experts.py
+│   │   ├── goe.py
+│   │   ├── router.py
+│   │   └── stem.py
+│   ├── routing
+│   │   ├── __init__.py
+│   │   ├── graph.py
+│   │   ├── policies.py
+│   │   └── regularizers.py
+└── └── utils
+        ├── __init__.py
+        ├── config.py
+        └── metrics.py

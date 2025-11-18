@@ -1,10 +1,9 @@
-struct.md
+# project
+/data
+
+# python
 .venv/
 __pycache__/
-data/processed/
-data/raw/
-ref/
-dir.txt
 
 # latex processing
 paper.aux
@@ -16,3 +15,5 @@ paper.log
 paper.out
 paper.synctex.gz
 
+# tests
+.pytest_cache
