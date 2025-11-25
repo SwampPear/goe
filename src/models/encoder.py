@@ -356,15 +356,15 @@ class Encoder(nn.Module):
 
         x = tokens
 
-        # optional positional encoding in token space.
+        # optional positional encoding in token space
         if self.pos_encoding is not None:
             x = self.pos_encoding(x)
 
-        # transformer encoder stack: T → T′
+        # transformer encoder stack: T -> T′
         for layer in self.layers:
             x = layer(x, key_padding_mask=key_padding_mask)
 
-        # optional auxiliary refinement: a → a′ using T′ as context.
+        # optional auxiliary refinement: a -> a′ using T′ as context
         a_out: Optional[Tensor] = aux
         if (
             self.aux_update is not None

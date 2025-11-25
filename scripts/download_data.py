@@ -10,17 +10,24 @@ from src.data.download import VesuviusChallengeVolumeDatasetDownloader
 
 def main():
     ap = argparse.ArgumentParser(description="Downloads data from the Vesuvius Challenge data server.")
+    ap.add_argument("--source", type=str, required=True, help="Data source.")
     ap.add_argument("--scroll", type=int, required=True, help="Scroll identifier.")
     ap.add_argument("--start", type=int, required=True, help="Start index.")
     ap.add_argument("--count", type=int, required=True, help="File count.")
     args = ap.parse_args()
 
-    scroll = args.scroll
-    start = args.start
-    count = args.count
+    source = args.source
 
-    downloader = VesuviusChallengeVolumeDatasetDownloader(scroll)
-    downloader.download_files(start=start, count=count)
+    if source == "volume":
+        scroll = args.scroll
+        start = args.start
+        count = args.count
 
-if __name__ == '__main__':
+        downloader = VesuviusChallengeVolumeDatasetDownloader(scroll)
+        downloader.download_files(start=start, count=count)
+    else:
+        raise Exception("Unsupported data source.")
+
+
+if __name__ == "__main__":
     main()
