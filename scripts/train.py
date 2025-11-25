@@ -3,21 +3,13 @@ import os
 import random
 from pathlib import Path
 from typing import Tuple, Dict, Any
-
 import numpy as np
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
-
-# Project imports – adjust names to match your actual modules/classes
-from src.models.goe import GraphOfExperts  # make sure this is the right class name
-from src.data.patches import VesuviusPatchDataset  # adjust to your dataset class
-from src.utils import config as cfg  # lightweight YAML loader (config/<name>.yaml)
-
-
-# -----------------------
-# Utility helpers
-# -----------------------
+from src.models.goe import GraphOfExperts
+from src.data.patches import VesuviusPatchDataset
+from src.utils import config as cfg
 
 
 def seed_everything(seed: int = 42) -> None:
@@ -31,7 +23,6 @@ def seed_everything(seed: int = 42) -> None:
 
 class AverageMeter:
     """Keeps track of running average of a metric (e.g., loss)."""
-
     def __init__(self):
         self.reset()
 
@@ -48,20 +39,13 @@ class AverageMeter:
         self.avg = self.sum / max(self.cnt, 1)
 
 
-def save_checkpoint(
-    state: Dict[str, Any], out_dir: Path, epoch: int, is_best: bool = False
-) -> None:
+def save_checkpoint(state: Dict[str, Any], out_dir: Path, epoch: int, is_best: bool = False) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     ckpt_path = out_dir / f"checkpoint_epoch_{epoch:04d}.pt"
     torch.save(state, ckpt_path)
     if is_best:
         best_path = out_dir / "checkpoint_best.pt"
         torch.save(state, best_path)
-
-
-# -----------------------
-# Dataloaders
-# -----------------------
 
 
 def build_dataloaders(args) -> Tuple[DataLoader, DataLoader]:

@@ -1,12 +1,3 @@
-"""
-Lightweight YAML-based configuration loader.
-
-This module provides a simple interface for retrieving configuration values stored under `config/<name>.yaml`.
-
-Configuration files must exist in the `config/` directory and follow the `<name>.yaml` naming convention.
-"""
-
-
 import yaml
 from typing import Dict, Any
 
