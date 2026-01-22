@@ -19,6 +19,8 @@ class EncoderConfig:
         num_heads: number of attention heads in each multi-head self-attention layer, must divide token_dim evenly
         ff_hidden_dim: hidden layer size of each block's feed-forward network (typically 2x4xtoken_dim)
         dropout: dropout probability applied to attention, feed-forward activations, and residual connections
+        use_positional_encoding: whether to add sinusoidal positional encodings to tokens
+        use_aux_update: whether to refine auxiliary routing features with cross-attention
     """
 
     token_dim: int = 128
@@ -27,6 +29,8 @@ class EncoderConfig:
     num_heads: int = 8
     ff_hidden_dim: int = 512
     dropout: float = 0.1
+    use_positional_encoding: bool = False
+    use_aux_update: bool = True
 
 
 class SinusoidalPositionalEncoding(nn.Module):

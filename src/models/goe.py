@@ -4,11 +4,11 @@ from typing import Optional, Dict, Any
 import torch
 from torch import nn, Tensor
 
-from stem import InputStem, InputStemConfig
-from encoder import Encoder, EncoderConfig
-from router import GraphRouter, GraphRouterConfig
-from experts import Experts, ExpertsConfig
-from decoder import Decoder, DecoderConfig
+from .stem import InputStem, InputStemConfig
+from .encoder import Encoder, EncoderConfig
+from .router import GraphRouter, GraphRouterConfig
+from .experts import Experts, ExpertsConfig
+from .decoder import Decoder, DecoderConfig
 
 
 @dataclass
