@@ -11,6 +11,60 @@ from tqdm import tqdm
 from src.utils.config import config
 
 
+def _safe_url(*parts: str) -> str:
+    """
+    Join URL parts with single slashes.
+    """
+    if not parts:
+        raise ValueError("No URL parts provided.")
+    url = parts[0]
+    for part in parts[1:]:
+        if not url.endswith("/"):
+            url = url + "/"
+        url = urljoin(url, str(part).lstrip("/"))
+    return url
+
+
+def _safe_path(*parts: str) -> str:
+    """
+    Join filesystem path parts safely.
+    """
+    return str(Path(*parts))
+
+
+def _listdir(url: str) -> List[str]:
+    """
+    List directory entries from a simple HTTP index page.
+    """
+    resp = requests.get(url, timeout=30)
+    resp.raise_for_status()
+    soup = BeautifulSoup(resp.text, "html.parser")
+    entries = []
+    for a in soup.find_all("a"):
+        href = a.get("href")
+        if not href or href in ("../", "./"):
+            continue
+        entries.append(href)
+    return entries
+
+
+def _download_file(sess: requests.Session, out_path: Path, url: str) -> None:
+    """
+    Download a single file to disk with a temporary .part file.
+    """
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = out_path.with_suffix(out_path.suffix + ".part")
+    if out_path.exists():
+        return
+    with sess.get(url, stream=True, timeout=60) as resp:
+        resp.raise_for_status()
+        with open(tmp_path, "wb") as f:
+            for chunk in resp.iter_content(chunk_size=1024 * 1024):
+                if chunk:
+                    f.write(chunk)
+    tmp_path.replace(out_path)
+
+
 def _download_files(files: List[str], dest_dir: str, base_url: str, start: int, count: int, concurrency: int):
     """
     Downloads a sequence of files.

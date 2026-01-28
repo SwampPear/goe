@@ -7,8 +7,13 @@ import numpy as np
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
-from src.models.goe import GraphOfExperts
-from src.data.patches import VesuviusPatchDataset
+from src.models.goe import GraphOfExperts, GraphOfExpertsConfig
+from src.models.stem import InputStemConfig
+from src.models.encoder import EncoderConfig
+from src.models.router import GraphRouterConfig
+from src.models.experts import ExpertsConfig
+from src.models.decoder import DecoderConfig
+from src.data.dataset import VesuviusPatchDataset
 from src.utils import config as cfg
 
 
@@ -55,18 +60,20 @@ def build_dataloaders(args) -> Tuple[DataLoader, DataLoader]:
     You MUST adapt the VesuviusPatchDataset constructor to match your actual dataset API.
     """
     train_ds = VesuviusPatchDataset(
-        root=args.train_data,
+        root=args.data_root,
         split="train",
         patch_size=args.patch_size,
         stride=args.stride,
         augment=True,
+        allow_missing_targets=False,
     )
     val_ds = VesuviusPatchDataset(
-        root=args.val_data,
+        root=args.data_root,
         split="val",
         patch_size=args.patch_size,
         stride=args.stride,
         augment=False,
+        allow_missing_targets=False,
     )
 
     train_loader = DataLoader(
@@ -100,13 +107,17 @@ def build_model(args, device: torch.device) -> nn.Module:
     You may want to pass model hyperparameters from YAML via cfg.config(args.config, "model_*").
     Here we keep it simple and let the model define its own defaults.
     """
-    model = GraphOfExperts(
-        # Example kwargs – update to your model signature:
-        # stem_channels=args.stem_channels,
-        # d_model=args.d_model,
-        # num_experts=args.num_experts,
-        # num_layers=args.num_layers,
+    cfg = GraphOfExpertsConfig(
+        stem=InputStemConfig(
+            patch_size=tuple(args.patch_size),
+            patch_stride=tuple(args.stride),
+        ),
+        encoder=EncoderConfig(),
+        router=GraphRouterConfig(),
+        experts=ExpertsConfig(),
+        decoder=DecoderConfig(),
     )
+    model = GraphOfExperts(cfg)
     model.to(device)
     return model
 
@@ -156,9 +167,10 @@ def train_one_epoch(
         optimizer.zero_grad(set_to_none=True)
 
         # Forward pass: GoE should consume volumetric x and output logits for ink (and/or geometry)
-        logits = model(volume)  # shape: [B, 1, D, H, W] or similar
+        out = model(volume)
+        logits = out["logits"]  # shape: [B, 1, D, H, W] or similar
 
-        loss = criterion(logits, target)
+        loss = criterion(logits, target) + out.get("aux_loss", 0.0)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         optimizer.step()
@@ -193,8 +205,9 @@ def validate(
         volume = batch["volume"].to(device, non_blocking=True)
         target = batch["target"].to(device, non_blocking=True)
 
-        logits = model(volume)
-        loss = criterion(logits, target)
+        out = model(volume)
+        logits = out["logits"]
+        loss = criterion(logits, target) + out.get("aux_loss", 0.0)
         loss_meter.update(loss.item(), volume.size(0))
 
     # Placeholder metric: negative loss (so "higher is better" for checkpointing)
@@ -223,8 +236,12 @@ def parse_args():
         default="goe_vesuvius",
         help="Name for logging / checkpoint directory",
     )
-    parser.add_argument("--train-data", type=str, required=True, help="Train data root")
-    parser.add_argument("--val-data", type=str, required=True, help="Val data root")
+    parser.add_argument(
+        "--data-root",
+        type=str,
+        default="data/processed",
+        help="Processed dataset root containing index.csv",
+    )
     parser.add_argument("--epochs", type=int, default=50)
     parser.add_argument("--batch-size", type=int, default=2)
     parser.add_argument("--lr", type=float, default=1e-4)
