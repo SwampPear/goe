@@ -55,3 +55,21 @@ No internet; ≤9h runtime (CPU/GPU)
 
 Core Insight:
 This is topology-aware 3D surface tracing, not generic segmentation or ink detection.
+
+Quickstart: Initial Test
+
+Prereqs:
+- Prepare a processed dataset with `index.csv` in your data root. The file should at minimum include:
+  `id,volume_path,split` and optionally `surface_path` (preferred), `ink_path`, `geometry_path`.
+  `volume_path` and `surface_path`/`ink_path` are relative to the data root.
+- If you have voxel spacing, include `spacing_z,spacing_y,spacing_x` or a single `spacing` column.
+
+Smoke-test commands (CPU):
+1) Train a tiny model on a small slice
+   python scripts/train.py --data-root <DATA_ROOT> --split train --limit-volumes 1 --max-steps 5 --tiny
+
+2) Eval sanity metrics (Dice/IoU only, not leaderboard metrics)
+   python scripts/eval.py --data-root <DATA_ROOT> --split val --limit-volumes 1 --tiny
+
+3) Predict and create submission.zip (binary .tif per volume)
+   python scripts/predict.py --data-root <DATA_ROOT> --split test --limit-volumes 1 --tiny --out submission.zip

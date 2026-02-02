@@ -46,8 +46,10 @@ def _slice_patch(arr: np.ndarray, start: Sequence[int], size: Sequence[int]) -> 
 class IndexEntry:
     volume_id: str
     volume_path: Path
+    surface_path: Optional[Path]
     ink_path: Optional[Path]
     geometry_path: Optional[Path]
+    spacing: Optional[Tuple[float, float, float]]
     split: str
 
 
@@ -71,6 +73,7 @@ class VesuviusPatchDataset(Dataset):
         stride: Sequence[int] = (8, 32, 32),
         augment: bool = False,
         allow_missing_targets: bool = True,
+        limit_volumes: Optional[int] = None,
         aug_cfg: Optional[VesuviusAugConfig] = None,
     ) -> None:
         self.root = Path(root)
@@ -82,6 +85,8 @@ class VesuviusPatchDataset(Dataset):
         self.entries = self._load_index()
         if split:
             self.entries = [e for e in self.entries if e.split == split]
+        if limit_volumes is not None:
+            self.entries = self.entries[: int(limit_volumes)]
 
         if not self.entries:
             raise RuntimeError(f"No dataset entries found for split='{split}'.")
@@ -112,16 +117,20 @@ class VesuviusPatchDataset(Dataset):
             reader = csv.DictReader(f)
             for row in reader:
                 volume_path = (self.root / row["volume_path"]).resolve()
+                surface_path = (self.root / row["surface_path"]).resolve() if row.get("surface_path") else None
                 ink_path = (self.root / row["ink_path"]).resolve() if row.get("ink_path") else None
                 geometry_path = (
                     (self.root / row["geometry_path"]).resolve() if row.get("geometry_path") else None
                 )
+                spacing = _parse_spacing(row)
                 entries.append(
                     IndexEntry(
                         volume_id=row["id"],
                         volume_path=volume_path,
+                        surface_path=surface_path,
                         ink_path=ink_path,
                         geometry_path=geometry_path,
+                        spacing=spacing,
                         split=row.get("split", "train"),
                     )
                 )
@@ -136,11 +145,12 @@ class VesuviusPatchDataset(Dataset):
 
         entry = self.entries[entry_idx]
         vol = _ensure_4d(_load_array(entry.volume_path)).astype(np.float32)
+        surface = _load_array(entry.surface_path).astype(np.float32) if entry.surface_path else None
         ink = _load_array(entry.ink_path).astype(np.float32) if entry.ink_path else None
         geom = _load_array(entry.geometry_path).astype(np.float32) if entry.geometry_path else None
 
         self._cache_id = entry_idx
-        self._cache = {"volume": vol, "ink": ink, "geometry": geom}
+        self._cache = {"volume": vol, "surface": surface, "ink": ink, "geometry": geom}
         return self._cache
 
     def __getitem__(self, idx: int) -> Dict[str, Tensor]:
@@ -156,7 +166,13 @@ class VesuviusPatchDataset(Dataset):
             "volume": torch.from_numpy(volume).unsqueeze(0),  # (1, C, D, H, W)
         }
 
-        if cache["ink"] is not None:
+        if cache["surface"] is not None:
+            surface = _slice_patch(cache["surface"], start, grid.patch_size)
+            if surface.ndim == 3:
+                surface = surface[None, ...]
+            sample["surface_target"] = torch.from_numpy(surface).unsqueeze(0)
+            sample["target"] = sample["surface_target"]
+        elif cache["ink"] is not None:
             ink = _slice_patch(cache["ink"], start, grid.patch_size)
             if ink.ndim == 3:
                 ink = ink[None, ...]
@@ -182,4 +198,32 @@ class VesuviusPatchDataset(Dataset):
             "volume_id": entry.volume_id,
             "patch_start": torch.tensor(start, dtype=torch.long),
         }
+        if entry.spacing is not None:
+            out["meta"]["spacing"] = torch.tensor(entry.spacing, dtype=torch.float32)
         return out
+
+
+def _parse_spacing(row: Dict[str, str]) -> Optional[Tuple[float, float, float]]:
+    """
+    Parse voxel spacing from CSV row if present.
+
+    Supported column conventions:
+      - spacing_z, spacing_y, spacing_x (preferred)
+      - spacing: "z,y,x" or "z y x"
+    """
+    has_any = any(k in row for k in ("spacing_z", "spacing_y", "spacing_x", "spacing"))
+    if not has_any:
+        return None
+
+    if row.get("spacing") and not any(row.get(k) for k in ("spacing_z", "spacing_y", "spacing_x")):
+        raw = row["spacing"].replace(",", " ").strip()
+        parts = [p for p in raw.split() if p]
+        if len(parts) == 3:
+            return (float(parts[0]), float(parts[1]), float(parts[2]))
+        return None
+
+    def _get(name: str) -> float:
+        val = row.get(name)
+        return float(val) if val not in (None, "") else 1.0
+
+    return (_get("spacing_z"), _get("spacing_y"), _get("spacing_x"))
